@@ -11,37 +11,44 @@ from geopy.distance import geodesic
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
 
-# Apply black background & white text styling
+# Apply light Apple-like design
 st.markdown(
     """
     <style>
-        body, .stApp { background-color: black !important; color: white !important; }
-        h1, h2, h3, h4, h5, h6, p, label, .stButton>button, .stMarkdown { color: white !important; }
-        .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSlider>div>div>div>div, 
-        .stSelectbox>div>div>div, .stDataFrame, .stTable, .stDownloadButton>button {
-            background-color: #333333 !important;
-            color: white !important;
-            border-radius: 5px !important;
-            border: 1px solid white !important;
+        body, .stApp { background-color: #f7f7f7 !important; color: #333 !important; }
+        h1, h2, h3, h4, h5, h6, p, label, .stMarkdown, .stButton>button { color: #222 !important; }
+        
+        /* Inputs, dropdowns, and buttons */
+        .stTextInput>div>div>input, .stNumberInput>div>div>input, 
+        .stSlider>div>div>div>div, .stSelectbox>div>div>div,
+        .stDataFrame, .stTable, .stDownloadButton>button {
+            background-color: #ffffff !important;
+            color: #333 !important;
+            border-radius: 10px !important;
+            border: 1px solid #ddd !important;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.1) !important;
+            padding: 8px !important;
         }
+
+        /* Special styling for buttons */
         .stDownloadButton>button {
-            background-color: #444444 !important;
+            background-color: #0084ff !important;
             color: white !important;
-            border-radius: 5px !important;
-            border: 1px solid white !important;
+            border-radius: 8px !important;
+            border: none !important;
             font-size: 16px !important;
             font-weight: bold !important;
-            padding: 10px !important;
+            padding: 10px 16px !important;
         }
         .stDownloadButton>button:hover {
-            background-color: #666666 !important;
+            background-color: #0066cc !important;
         }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-st.markdown("<h1> 🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
+st.markdown("<h1>🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- CORE FUNCTIONS ----------------------
