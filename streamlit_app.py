@@ -51,30 +51,6 @@ st.markdown(
 st.markdown("<h1>🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
-# ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
-with st.expander("📄 **Click to deploy the File Requirements**"):
-    st.markdown(
-        """
-        ### 📊 **Excel File Structure**
-        The Excel file should have the following format:
-        - The **sheet name** must be `Sheet1`.
-        - The **headers** should start from the **2nd row** with these columns:
-        
-        | A | B | C | D | E | F | G | H | I |
-        |---|---|---|---|---|---|---|---|---|
-        |   |   |   |   |   |   |   |   |   |
-        | 2 | Nombre Comercial | Calle | No. | Sector | Municipio | Provincia | **Latitud** | **Longitud** |
-        | 3 | Example Name | Example St. | 123 | Sector 1 | City 1 | Province 1 | **18.1234** | **-69.9876** |
-        | 4 | Example Name 2 | Another St. | 456 | Sector 2 | City 2 | Province 2 | **18.5678** | **-69.6543** |
-
-        **⚠️ Important Note:**  
-        - If `Latitud` and `Longitud` are **missing**, you can retrieve them using the **Google Maps API** in this platform.
-        - The more accurate the coordinates, the better the clustering and routing results.
-
-        """,
-        unsafe_allow_html=True
-    )
-
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     """Applies balanced clustering to evenly distribute points near the set limit."""
@@ -84,6 +60,43 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     jitter = np.random.normal(0, 0.00001, coords.shape)
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
     df["Cluster"] = kmeans.labels_
+
+    # Group points into cluster lists
+    clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
+    centroids = np.array(kmeans.cluster_centers_)
+
+    max_iterations = 100  # Prevent infinite loops
+    iterations = 0
+
+    while iterations < max_iterations:
+        overfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
+        underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < max_points_per_cluster // 2}
+
+        if not overfilled_clusters and not underfilled_clusters:
+            break
+
+        for cluster_id, point_count in overfilled_clusters.items():
+            if point_count <= max_points_per_cluster:
+                continue
+
+            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
+            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
+
+            for excess_point in excess_points:
+                excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
+                distances = np.linalg.norm(centroids - excess_coords, axis=1)
+                sorted_clusters = np.argsort(distances)
+                nearest_cluster = next((c for c in sorted_clusters if c in underfilled_clusters), None)
+
+                if nearest_cluster is not None:
+                    clusters_dict[nearest_cluster].append(excess_point)
+
+        iterations += 1
+
+    new_labels = np.zeros(len(df), dtype=int)
+    for cluster_id, indices in clusters_dict.items():
+        new_labels[indices] = cluster_id
+    df["Cluster"] = new_labels
 
     return df
 
@@ -123,8 +136,8 @@ if uploaded_file:
     if {"Latitud", "Longitud"}.issubset(df.columns):
         df = df.dropna(subset=["Latitud", "Longitud"])
     else:
-        st.warning("⚠️ **Missing Coordinates!** Enter Google Maps API Key to fetch them.")
-        api_key = st.text_input("🔑 **Google Maps API Key**")
+        st.warning("Coordinates missing! Enter Google Maps API Key to geocode addresses.")
+        api_key = st.text_input("🔑 Google Maps API Key")
 
         if api_key and "Ubicacion" in df.columns:
             gmaps = googlemaps.Client(key=api_key)
