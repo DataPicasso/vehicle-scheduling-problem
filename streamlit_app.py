@@ -143,12 +143,12 @@ if uploaded_file:
 
     df = apply_balanced_clustering(df, num_clusters, max_points_per_cluster)
 
-    agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
+    agent = st.number_input("🔍 Select Agent ", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
     # ---------------------- START & END POINT SELECTION ----------------------
-    start_point = st.selectbox("🚀 Select Start Location", cluster_data["Nombre Comercial"].tolist())
-    end_point = st.selectbox("🏁 Select End Location", cluster_data["Nombre Comercial"].tolist())
+    start_point = st.selectbox("🚶‍➡️ Select Start Location", cluster_data["Nombre Comercial"].tolist())
+    end_point = st.selectbox("🚶 Select End Location", cluster_data["Nombre Comercial"].tolist())
 
     if not cluster_data.empty:
         cluster_data["Original Index"] = cluster_data.index
@@ -175,7 +175,7 @@ if uploaded_file:
 
         m.fit_bounds(bounds)  # Ensure full view of all points
 
-        st.write(f"## 🌍 Route for Agent {agent}")
+        st.write(f"## 🧑🏽‍💼 Route for Agent {agent}")
         st_folium(m, width=800, height=500)
 
         st.download_button("📥 Download Optimized Route", cluster_data.to_csv(index=False), f"agent_{agent}_optimized_route.csv", "text/csv")
