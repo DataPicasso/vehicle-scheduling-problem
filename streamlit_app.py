@@ -10,6 +10,8 @@ import requests
 import os
 import subprocess
 from sklearn.cluster import KMeans
+from sklearn.metrics import pairwise_distances
+from geopy.distance import geodesic
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
@@ -64,40 +66,32 @@ if uploaded_file:
     notebook_path = "/tmp/VSP.ipynb"
     script_path = "/tmp/VSP_script.py"
 
-    apply_clustering = None  # Placeholder for clustering function
-    tsp_nearest_neighbor = None  # Placeholder for TSP function
+    apply_clustering = None
+    tsp_nearest_neighbor = None
 
     try:
-        # Download latest notebook
         response = requests.get(notebook_url)
         response.raise_for_status()
 
-        # Save notebook locally
         with open(notebook_path, "w", encoding="utf-8") as f:
             f.write(response.text)
 
-        # Convert notebook to Python script
         subprocess.run(
             ["jupyter", "nbconvert", "--to", "script", "--output", script_path.replace(".py", ""), notebook_path],
             check=True
         )
 
-        # Ensure the script exists
         converted_script_path = script_path
         if not os.path.exists(converted_script_path):
             st.error(f"🚨 Converted script not found: {converted_script_path}")
             raise FileNotFoundError(f"🚨 Converted script not found: {converted_script_path}")
 
-        # Debugging: Read the script content
         with open(converted_script_path, "r", encoding="utf-8") as script_file:
             script_content = script_file.read()
-        st.write("📝 **Script Content Preview:**", script_content[:500])  # Show first 500 chars for debugging
 
-        # Execute the converted Python script
         exec_globals = {}
         exec(script_content, exec_globals)
 
-        # Ensure required functions exist
         apply_clustering = exec_globals.get("apply_clustering")
         tsp_nearest_neighbor = exec_globals.get("tsp_nearest_neighbor")
 
@@ -128,35 +122,34 @@ if uploaded_file:
         if cluster_data.shape[0] > 0:
             if tsp_nearest_neighbor:
                 tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
-                cluster_data = cluster_data.iloc[tsp_order]
-                cluster_data["Order"] = range(1, len(cluster_data) + 1)
+                if tsp_order is not None and len(tsp_order) > 0:
+                    cluster_data = cluster_data.iloc[tsp_order]
+                    cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
-                st.write(f"### 📍 Optimized Route for Agent {agent_number}")
-                st.dataframe(cluster_data[["Order", "Nombre Comercial", "Latitud", "Longitud"]])
+                    st.write(f"### 📍 Optimized Route for Agent {agent_number}")
+                    st.dataframe(cluster_data[["Order", "Nombre Comercial", "Latitud", "Longitud"]])
 
-                # ---------------------- EXPORT CSV ----------------------
-                buffer = io.BytesIO()
-                cluster_data.to_csv(buffer, index=False)
-                st.download_button(label="📥 Download Route as CSV", data=buffer.getvalue(), file_name=f"Route_Agent_{agent_number}.csv", mime="text/csv")
+                    # ---------------------- EXPORT CSV ----------------------
+                    buffer = io.BytesIO()
+                    cluster_data.to_csv(buffer, index=False)
+                    st.download_button(label="📥 Download Route as CSV", data=buffer.getvalue(), file_name=f"Route_Agent_{agent_number}.csv", mime="text/csv")
 
-                # ---------------------- DISPLAY MAP ----------------------
-                m = folium.Map(location=[cluster_data.iloc[0]["Latitud"], cluster_data.iloc[0]["Longitud"]], zoom_start=12)
-                for idx, row in cluster_data.iterrows():
-                    folium.Marker(
-                        location=[row["Latitud"], row["Longitud"]],
-                        icon=folium.Icon(color="blue", icon="info-sign"),
-                        popup=f"📌 {row['Nombre Comercial']}"
-                    ).add_to(m)
+                    # ---------------------- DISPLAY MAP ----------------------
+                    m = folium.Map(location=[cluster_data.iloc[0]["Latitud"], cluster_data.iloc[0]["Longitud"]], zoom_start=12)
+                    for idx, row in cluster_data.iterrows():
+                        folium.Marker(
+                            location=[row["Latitud"], row["Longitud"]],
+                            icon=folium.Icon(color="blue", icon="info-sign"),
+                            popup=f"📌 {row['Nombre Comercial']}"
+                        ).add_to(m)
 
-                # Show the map
-                st_folium(m, width=800, height=500)
-
+                    st_folium(m, width=800, height=500)
+                else:
+                    st.error("⚠️ TSP function did not return a valid route.")
             else:
                 st.error("⚠️ TSP function not found. Route optimization cannot be applied.")
-
         else:
             st.error(f"⚠️ No data available for Agent {agent_number}. Try a different one.")
 
     else:
         st.error("❌ Clustering failed. Please check your dataset and try again.")
-
