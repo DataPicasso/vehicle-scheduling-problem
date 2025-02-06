@@ -30,7 +30,7 @@ if uploaded_file:
     with col1:
         num_clusters = st.slider("🔹 Number of Agents", min_value=2, max_value=20, value=10)
     with col2:
-        max_points_per_cluster = st.slider("🔹 Places per Agent", min_value=50, max_value=500, value=281)
+        max_points_per_cluster = st.slider("🔹 Places per Agent (Max Points per Cluster)", min_value=50, max_value=500, value=281)
 
     # ---------------------- HANDLE MISSING COORDINATES ----------------------
     if "Latitud" not in df.columns or "Longitud" not in df.columns:
@@ -97,16 +97,16 @@ if uploaded_file:
 
         st.success("✅ **Notebook executed successfully!**")
 
-        # ---------------------- APPLY CLUSTERING ----------------------
-        st.write("🔄 **Applying clustering...**")
-        df = apply_clustering(df, num_clusters, max_points_per_cluster)
-
     except requests.exceptions.RequestException as e:
         st.error(f"⚠️ Error fetching notebook: {e}")
     except FileNotFoundError as e:
         st.error(f"⚠️ Notebook conversion failed: {e}")
     except Exception as e:
         st.error(f"⚠️ Error executing notebook: {e}")
+
+    # ---------------------- APPLY CLUSTERING AFTER PARAMETER SELECTION ----------------------
+    st.write("🔄 **Applying clustering...**")
+    df = apply_clustering(df, num_clusters, max_points_per_cluster)  # Always apply clustering after selecting parameters
 
     # ---------------------- ROUTE DISPLAY ----------------------
     agent_number = st.number_input("🔍 Select Agent", min_value=1, max_value=num_clusters, value=1)
