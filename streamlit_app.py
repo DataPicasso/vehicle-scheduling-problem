@@ -27,14 +27,14 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
     centroids = np.array(kmeans.cluster_centers_)
 
-    max_iterations = 100  # **Prevents infinite loops**
+    max_iterations = 100  # Prevents infinite loops
     iterations = 0
 
     for cluster_id, points in clusters_dict.items():
         while len(points) > max_points_per_cluster and iterations < max_iterations:
             excess_point = points.pop()
             
-            # **Ensure `excess_coords` is 2D NumPy array**
+            # Ensure excess_coords is a 2D NumPy array
             excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
 
             # Compute distances
