@@ -1,5 +1,11 @@
 import streamlit as st
-import nbformat
+try:
+    import nbformat
+except ModuleNotFoundError:
+    import os
+    os.system("pip install nbformat")
+    import nbformat
+
 import pandas as pd
 import numpy as np
 import folium
