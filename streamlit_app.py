@@ -91,6 +91,12 @@ if uploaded_file:
     with col2:
         max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 50, 500, 281)
 
+    df = df.dropna(subset=["Latitud", "Longitud"])  # Ensure valid data
+    df = df.astype({"Latitud": float, "Longitud": float})  # Ensure correct types
+
+    # ---------------------- CLUSTER SELECTION ----------------------
+    df["Cluster"] = KMeans(n_clusters=num_clusters, random_state=42, n_init=10).fit(df[["Latitud", "Longitud"]]).labels_
+    
     agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
@@ -131,4 +137,6 @@ if uploaded_file:
         st_folium(m, width=800, height=500)
 
         # ---------------------- DOWNLOAD ROUTE CSV ----------------------
-        st.download_button("📥 Download Optimized Route", cluster_data.to_csv(index=False), f"agent_{agent}_optimized_route.csv", "text/csv")
+        csv_buffer = io.StringIO()
+        cluster_data.to_csv(csv_buffer, index=False)
+        st.download_button("📥 Download Optimized Route", csv_buffer.getvalue(), f"agent_{agent}_optimized_route.csv", "text/csv")
