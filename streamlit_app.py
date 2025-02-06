@@ -11,13 +11,31 @@ from geopy.distance import geodesic
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
 
-# Apply white background & black text
+# Apply black background & white text styling
 st.markdown(
     """
     <style>
-        body, .stApp { background-color: white !important; color: black !important; }
-        h1, h2, h3, h4, h5, h6, p, label, .stButton>button { color: black !important; }
-        .stDataFrame, .stTable, .stDownloadButton { color: black !important; }
+        body, .stApp { background-color: black !important; color: white !important; }
+        h1, h2, h3, h4, h5, h6, p, label, .stButton>button, .stMarkdown { color: white !important; }
+        .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSlider>div>div>div>div, 
+        .stSelectbox>div>div>div, .stDataFrame, .stTable, .stDownloadButton>button {
+            background-color: #333333 !important;
+            color: white !important;
+            border-radius: 5px !important;
+            border: 1px solid white !important;
+        }
+        .stDownloadButton>button {
+            background-color: #444444 !important;
+            color: white !important;
+            border-radius: 5px !important;
+            border: 1px solid white !important;
+            font-size: 16px !important;
+            font-weight: bold !important;
+            padding: 10px !important;
+        }
+        .stDownloadButton>button:hover {
+            background-color: #666666 !important;
+        }
     </style>
     """,
     unsafe_allow_html=True
@@ -42,26 +60,24 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
 
     max_iterations = 100  # Prevent infinite loops
     iterations = 0
-    min_points_per_cluster = max_points_per_cluster // 2  # Ensuring balance
 
     while iterations < max_iterations:
         overfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
-        underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < min_points_per_cluster}
+        underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < max_points_per_cluster // 2}
 
         if not overfilled_clusters and not underfilled_clusters:
-            break  # Stop if all clusters are balanced
+            break
 
         for cluster_id, point_count in overfilled_clusters.items():
             if point_count <= max_points_per_cluster:
-                continue  
+                continue
 
-            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]  
-            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]  
+            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
+            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
 
             for excess_point in excess_points:
                 excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
                 distances = np.linalg.norm(centroids - excess_coords, axis=1)
-
                 sorted_clusters = np.argsort(distances)
                 nearest_cluster = next((c for c in sorted_clusters if c in underfilled_clusters), None)
 
@@ -99,9 +115,7 @@ uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type
 if uploaded_file:
     df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
 
-    # Fix Arrow serialization by ensuring string types
     df = df.astype({col: str for col in df.select_dtypes('object').columns})
-
     st.write("✅ **File uploaded successfully!** Preview:")
     st.dataframe(df.head())
 
@@ -112,7 +126,6 @@ if uploaded_file:
     with col2:
         max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 50, 500, 281)
 
-    # ---------------------- COORDINATE VALIDATION ----------------------
     if {"Latitud", "Longitud"}.issubset(df.columns):
         df = df.dropna(subset=["Latitud", "Longitud"])
     else:
@@ -126,42 +139,32 @@ if uploaded_file:
             )
             df = df.dropna(subset=["Latitud", "Longitud"])
 
-    # ---------------------- CLUSTERING ----------------------
     df = apply_balanced_clustering(df, num_clusters, max_points_per_cluster)
 
-    # ---------------------- ROUTE VISUALIZATION ----------------------
     agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
     if not cluster_data.empty:
         cluster_data["Original Index"] = cluster_data.index
-
-        # Get optimized order using TSP
         tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
-        
-        # Apply TSP order
         cluster_data = cluster_data.iloc[tsp_order].reset_index(drop=True)
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
-        # ---------------------- DISPLAY ALL POINTS BEFORE ROUTE ----------------------
         m = folium.Map(location=cluster_data[["Latitud", "Longitud"]].mean().tolist(), zoom_start=12)
-
         for _, row in cluster_data.iterrows():
             folium.Marker(
                 [row["Latitud"], row["Longitud"]],
-                popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}<br>Order: {row['Order']}"
+                popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}"
             ).add_to(m)
 
-        # Draw route
         folium.PolyLine(
             cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1
         ).add_to(m)
 
-        # Display map
-        st.write(f"## 🗺️ Optimized Route for Agent {agent}")
+        st.write(f"## 🗺️ Route for Agent {agent}")
         st_folium(m, width=800, height=500)
 
-        # ---------------------- CSV EXPORT ----------------------
+        # ---------------------- Styled CSV EXPORT BUTTON ----------------------
         csv_buffer = io.StringIO()
         cluster_data.to_csv(csv_buffer, index=False)
         st.download_button(
