@@ -14,27 +14,28 @@ st.markdown("<h1>📍 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- CORE FUNCTIONS ----------------------
-def apply_balanced_clustering(df, num_clusters):
-    """Apply balanced clustering to fairly distribute points among agents."""
+def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
+    """Applies balanced clustering by redistributing excess points to maintain equal clusters."""
     coords = df[["Latitud", "Longitud"]].values
 
-    # Ensure small noise to avoid identical points breaking KMeans
+    # Small noise added to avoid KMeans breaking due to identical points
     jitter = np.random.normal(0, 0.00001, coords.shape)
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
     df["Cluster"] = kmeans.labels_
 
-    # Balance clusters by redistributing excess points
+    # Group points into cluster lists
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
     centroids = np.array(kmeans.cluster_centers_)
-    
+
+    # Balance clusters by redistributing excess points
     total_points = len(df)
-    ideal_size = total_points // num_clusters  # Ideal locations per cluster
-    
+    ideal_size = total_points // num_clusters  # Target locations per agent
+
     max_iterations = 100  # Prevent infinite loops
     iterations = 0
 
     for cluster_id, points in clusters_dict.items():
-        while len(points) > ideal_size and iterations < max_iterations:
+        while len(points) > max_points_per_cluster and iterations < max_iterations:
             excess_point = points.pop()
 
             # Ensure excess_coords is a 2D NumPy array
@@ -59,7 +60,7 @@ def apply_balanced_clustering(df, num_clusters):
     return df
 
 def tsp_nearest_neighbor(points):
-    """Solve TSP using nearest neighbor heuristic."""
+    """Solves TSP using nearest neighbor heuristic."""
     if len(points) < 2:
         return [0] if len(points) == 1 else []
     
@@ -90,6 +91,8 @@ if uploaded_file:
     col1, col2 = st.columns(2)
     with col1:
         num_clusters = st.slider("🔹 Number of Agents", 2, 20, 10)
+    with col2:
+        max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 10, 500, 50)
 
     # ---------------------- COORDINATE VALIDATION ----------------------
     if {"Latitud", "Longitud"}.issubset(df.columns):
@@ -106,7 +109,7 @@ if uploaded_file:
             df = df.dropna(subset=["Latitud", "Longitud"])
 
     # ---------------------- CLUSTERING ----------------------
-    df = apply_balanced_clustering(df, num_clusters)
+    df = apply_balanced_clustering(df, num_clusters, max_points_per_cluster)
 
     # ---------------------- ROUTE VISUALIZATION ----------------------
     agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
