@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 from geopy.distance import geodesic
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
-st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
+st.set_page_config(page_title="🚀 AI Route Optimization", layout="wide")
 
 # Apply light Apple-like design
 st.markdown(
@@ -48,95 +48,72 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<h1>🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
+st.markdown("<h1>🚀 AI Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
-
-# ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
-with st.expander("📄 **Click to see File Requirements**"):
-    st.markdown(
-        """
-        ### 📊 **Excel File Structure**
-        The Excel file should have the following format:
-        - The **sheet name** must be `Sheet1`.
-        - The **headers** should start from the **2nd row** with these columns:
-        
-        | A | B | C | D | E | F | G | H | I |
-        |---|---|---|---|---|---|---|---|---|
-        |   |   |   |   |   |   |   |   |   |
-        | 2 | Nombre Comercial | Calle | No. | Sector | Municipio | Provincia | **Latitud** | **Longitud** |
-        | 3 | Example Name | Example St. | 123 | Sector 1 | City 1 | Province 1 | **18.1234** | **-69.9876** |
-        | 4 | Example Name 2 | Another St. | 456 | Sector 2 | City 2 | Province 2 | **18.5678** | **-69.6543** |
-
-        **⚠️ Important Note:**  
-        - If `Latitud` and `Longitud` are **missing**, you can retrieve them using the **Google Maps API** in this platform.
-        - The more accurate the coordinates, the better the clustering and routing results.
-
-        """,
-        unsafe_allow_html=True
-    )
 
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
-    """Applies balanced clustering to evenly distribute points near the set limit."""
+    """Apply clustering to evenly distribute points among agents."""
     coords = df[["Latitud", "Longitud"]].values
-
-    # Small noise added to avoid KMeans breaking due to identical points
     jitter = np.random.normal(0, 0.00001, coords.shape)
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
     df["Cluster"] = kmeans.labels_
-
-    # Group points into cluster lists
+    
+    # Balance clusters
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
     centroids = np.array(kmeans.cluster_centers_)
-
-    max_iterations = 100  # Prevent infinite loops
+    max_iterations = 100
     iterations = 0
-
+    
     while iterations < max_iterations:
-        overfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
-        underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < max_points_per_cluster // 2}
-
-        if not overfilled_clusters and not underfilled_clusters:
+        overfilled = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
+        underfilled = {c: len(p) for c, p in clusters_dict.items() if len(p) < max_points_per_cluster // 2}
+        
+        if not overfilled and not underfilled:
             break
-
-        for cluster_id, point_count in overfilled_clusters.items():
+        
+        for cluster_id, point_count in overfilled.items():
             if point_count <= max_points_per_cluster:
                 continue
-
             excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
             clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
-
+            
             for excess_point in excess_points:
                 excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
                 distances = np.linalg.norm(centroids - excess_coords, axis=1)
                 sorted_clusters = np.argsort(distances)
-                nearest_cluster = next((c for c in sorted_clusters if c in underfilled_clusters), None)
-
+                nearest_cluster = next((c for c in sorted_clusters if c in underfilled), None)
+                
                 if nearest_cluster is not None:
                     clusters_dict[nearest_cluster].append(excess_point)
-
+        
         iterations += 1
-
+    
     new_labels = np.zeros(len(df), dtype=int)
     for cluster_id, indices in clusters_dict.items():
         new_labels[indices] = cluster_id
     df["Cluster"] = new_labels
-
+    
     return df
 
-def tsp_nearest_neighbor(points):
-    """Solves TSP using nearest neighbor heuristic."""
+def tsp_nearest_neighbor(points, start_idx=0, end_idx=None):
+    """Solves TSP using nearest neighbor heuristic with custom start and end."""
     if len(points) < 2:
         return [0] if len(points) == 1 else []
     
-    remaining = list(range(1, len(points)))
-    route = [0]
+    remaining = list(range(len(points)))
+    route = [start_idx]
+    remaining.remove(start_idx)
 
     while remaining:
         last = route[-1]
         nearest = min(remaining, key=lambda x: geodesic(points[last], points[x]).meters)
         route.append(nearest)
         remaining.remove(nearest)
+
+    if end_idx is not None and end_idx in route:
+        route.remove(end_idx)
+        route.append(end_idx)
 
     return route
 
@@ -145,26 +122,29 @@ uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type
 
 if uploaded_file:
     df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
-
     df = df.astype({col: str for col in df.select_dtypes('object').columns})
     st.write("✅ **File uploaded successfully!** Preview:")
     st.dataframe(df.head())
-
-    # ---------------------- PARAMETER SELECTION ----------------------
+    
     col1, col2 = st.columns(2)
     with col1:
         num_clusters = st.slider("🔹 Number of Agents", 2, 20, 10)
     with col2:
         max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 50, 500, 281)
-
+    
     df = apply_balanced_clustering(df, num_clusters, max_points_per_cluster)
-
+    
     agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
     if not cluster_data.empty:
-        cluster_data["Original Index"] = cluster_data.index
-        tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
+        start_location = st.selectbox("🏁 Select Start Location", cluster_data["Nombre Comercial"].unique())
+        end_location = st.selectbox("🏁 Select End Location", cluster_data["Nombre Comercial"].unique())
+
+        start_idx = cluster_data[cluster_data["Nombre Comercial"] == start_location].index[0]
+        end_idx = cluster_data[cluster_data["Nombre Comercial"] == end_location].index[0]
+
+        tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values, start_idx, end_idx)
         cluster_data = cluster_data.iloc[tsp_order].reset_index(drop=True)
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
@@ -173,7 +153,7 @@ if uploaded_file:
         for _, row in cluster_data.iterrows():
             folium.Marker(
                 [row["Latitud"], row["Longitud"]],
-                popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}"
+                popup=f"{row['Nombre Comercial']}<br>Order: {row['Order']}"
             ).add_to(m)
 
         folium.PolyLine(
@@ -183,4 +163,12 @@ if uploaded_file:
         st.write(f"## 🌍 Route for Agent {agent}")
         st_folium(m, width=800, height=500)
 
-        st.download_button("📥 Download Optimized Route", cluster_data.to_csv(index=False), f"agent_{agent}_optimized_route.csv", "text/csv")
+        # ---------------------- Styled CSV EXPORT BUTTON ----------------------
+        csv_buffer = io.StringIO()
+        cluster_data.to_csv(csv_buffer, index=False)
+        st.download_button(
+            "📥 Download Optimized Route",
+            csv_buffer.getvalue(),
+            f"agent_{agent}_optimized_route.csv",
+            "text/csv"
+        )
