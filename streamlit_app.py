@@ -75,11 +75,18 @@ if uploaded_file:
         with open(notebook_path, "w", encoding="utf-8") as f:
             f.write(response.text)
 
-        # Convert notebook to Python script (removes extra .py)
-        subprocess.run(["jupyter", "nbconvert", "--to", "script", notebook_path, "--output", script_path.replace(".py", "")], check=True)
+        # Convert notebook to Python script (fix output naming issue)
+        subprocess.run(["jupyter", "nbconvert", "--to", "script", notebook_path], check=True)
 
-        # Execute the Python script
-        with open(script_path, "r", encoding="utf-8") as script_file:
+        # Get the actual converted script name
+        converted_script_path = notebook_path.replace(".ipynb", ".py")
+
+        # Debugging step: check if the file exists
+        if not os.path.exists(converted_script_path):
+            raise FileNotFoundError(f"🚨 Converted script not found: {converted_script_path}")
+
+        # Execute the converted Python script
+        with open(converted_script_path, "r", encoding="utf-8") as script_file:
             exec_globals = {}
             exec(script_file.read(), exec_globals)
 
@@ -92,6 +99,8 @@ if uploaded_file:
 
     except requests.exceptions.RequestException as e:
         st.error(f"⚠️ Error fetching the notebook: {e}")
+    except FileNotFoundError as e:
+        st.error(f"⚠️ Notebook conversion failed: {e}")
     except Exception as e:
         st.error(f"⚠️ Error executing the notebook: {e}")
 
