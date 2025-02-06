@@ -33,7 +33,9 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     for cluster_id, points in clusters_dict.items():
         while len(points) > max_points_per_cluster and iterations < max_iterations:
             excess_point = points.pop()
-            excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.astype(float).reshape(1, -1)
+            
+            # **Ensure `excess_coords` is 2D NumPy array**
+            excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
 
             # Compute distances
             distances = np.linalg.norm(centroids - excess_coords, axis=1)
