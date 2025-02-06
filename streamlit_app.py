@@ -60,9 +60,9 @@ with st.expander("📄 **Click to View File Requirements**"):
         - The **sheet name** must be `Sheet1`.
         - The **headers** should start from the **2nd row** with these columns:
         
-        | A | B | C | D | E | F | G | H |
-        |---|---|---|---|---|---|---|---|
-        |   |   |   |   |   |   |   |   |
+        | A | B | C | D | E | F | G | H | I |
+        |---|---|---|---|---|---|---|---|---|
+        |   |   |   |   |   |   |   |   |   |
         | 2 | Nombre Comercial | Calle | No. | Sector | Municipio | Provincia | **Latitud** | **Longitud** |
         | 3 | Example Name | Example St. | 123 | Sector 1 | City 1 | Province 1 | **18.1234** | **-69.9876** |
         | 4 | Example Name 2 | Another St. | 456 | Sector 2 | City 2 | Province 2 | **18.5678** | **-69.6543** |
@@ -138,15 +138,5 @@ if uploaded_file:
             cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1
         ).add_to(m)
 
-        st.write(f"## 🗺️ Route for Agent {agent}")
+        st.write(f"## 🌍 Route for Agent {agent}")
         st_folium(m, width=800, height=500)
-
-        # ---------------------- Styled CSV EXPORT BUTTON ----------------------
-        csv_buffer = io.StringIO()
-        cluster_data.to_csv(csv_buffer, index=False)
-        st.download_button(
-            "📥 Download Optimized Route",
-            csv_buffer.getvalue(),
-            f"agent_{agent}_optimized_route.csv",
-            "text/csv"
-        )
