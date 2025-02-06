@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 from geopy.distance import geodesic
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
-st.set_page_config(page_title="🚀 AI Route Optimization", layout="wide")
+st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
 
 # Apply light Apple-like design
 st.markdown(
@@ -48,8 +48,31 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<h1>🚀 AI Route Optimization</h1>", unsafe_allow_html=True)
+st.markdown("<h1>🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
+
+# ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
+with st.expander("📄 **Click to see File Requirements**"):
+    st.markdown(
+        """
+        ### 📊 **Excel File Structure**
+        The Excel file should have the following format:
+        - The **sheet name** must be `Sheet1`.
+        - The **headers** should start from the **2nd row** with these columns:
+        
+        | A | B | C | D | E | F | G | H | I |
+        |---|---|---|---|---|---|---|---|---|
+        |   |   |   |   |   |   |   |   |   |
+        | 2 | Nombre Comercial | Calle | No. | Sector | Municipio | Provincia | **Latitud** | **Longitud** |
+        | 3 | Example Name | Example St. | 123 | Sector 1 | City 1 | Province 1 | **18.1234** | **-69.9876** |
+        | 4 | Example Name 2 | Another St. | 456 | Sector 2 | City 2 | Province 2 | **18.5678** | **-69.6543** |
+
+        **⚠️ Important Note:**  
+        - If `Latitud` and `Longitud` are **missing**, you can retrieve them using the **Google Maps API** in this platform.
+        - The more accurate the coordinates, the better the clustering and routing results.
+        """,
+        unsafe_allow_html=True
+    )
 
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
@@ -96,27 +119,6 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     
     return df
 
-def tsp_nearest_neighbor(points, start_idx=0, end_idx=None):
-    """Solves TSP using nearest neighbor heuristic with custom start and end."""
-    if len(points) < 2:
-        return [0] if len(points) == 1 else []
-    
-    remaining = list(range(len(points)))
-    route = [start_idx]
-    remaining.remove(start_idx)
-
-    while remaining:
-        last = route[-1]
-        nearest = min(remaining, key=lambda x: geodesic(points[last], points[x]).meters)
-        route.append(nearest)
-        remaining.remove(nearest)
-
-    if end_idx is not None and end_idx in route:
-        route.remove(end_idx)
-        route.append(end_idx)
-
-    return route
-
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
 
@@ -138,29 +140,20 @@ if uploaded_file:
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
     if not cluster_data.empty:
-        start_location = st.selectbox("🏁 Select Start Location", cluster_data["Nombre Comercial"].unique())
-        end_location = st.selectbox("🏁 Select End Location", cluster_data["Nombre Comercial"].unique())
-
-        start_idx = cluster_data[cluster_data["Nombre Comercial"] == start_location].index[0]
-        end_idx = cluster_data[cluster_data["Nombre Comercial"] == end_location].index[0]
-
-        tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values, start_idx, end_idx)
-        cluster_data = cluster_data.iloc[tsp_order].reset_index(drop=True)
-        cluster_data["Order"] = range(1, len(cluster_data) + 1)
+        st.write(f"## 🌍 Route for Agent {agent}")
 
         # ---------------------- MAP DISPLAY ----------------------
         m = folium.Map(location=cluster_data[["Latitud", "Longitud"]].mean().tolist(), zoom_start=12)
         for _, row in cluster_data.iterrows():
             folium.Marker(
                 [row["Latitud"], row["Longitud"]],
-                popup=f"{row['Nombre Comercial']}<br>Order: {row['Order']}"
+                popup=f"{row['Nombre Comercial']}"
             ).add_to(m)
 
         folium.PolyLine(
             cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1
         ).add_to(m)
 
-        st.write(f"## 🌍 Route for Agent {agent}")
         st_folium(m, width=800, height=500)
 
         # ---------------------- Styled CSV EXPORT BUTTON ----------------------
