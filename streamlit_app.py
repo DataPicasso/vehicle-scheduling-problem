@@ -9,6 +9,7 @@ import nbformat
 import requests
 import os
 import subprocess
+from sklearn.cluster import KMeans
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
@@ -63,6 +64,9 @@ if uploaded_file:
     notebook_path = "/tmp/VSP.ipynb"
     script_path = "/tmp/VSP_script.py"
 
+    apply_clustering = None  # Placeholder for the function
+    tsp_nearest_neighbor = None  # Placeholder for TSP function
+
     try:
         # Download latest notebook
         response = requests.get(notebook_url)
@@ -89,24 +93,25 @@ if uploaded_file:
             exec(script_file.read(), exec_globals)
 
         # Ensure required functions exist
-        if "apply_clustering" not in exec_globals or "tsp_nearest_neighbor" not in exec_globals:
-            raise ValueError("❌ Required functions not found in the notebook.")
+        apply_clustering = exec_globals.get("apply_clustering")
+        tsp_nearest_neighbor = exec_globals.get("tsp_nearest_neighbor")
 
-        apply_clustering = exec_globals["apply_clustering"]
-        tsp_nearest_neighbor = exec_globals["tsp_nearest_neighbor"]
+        if not apply_clustering or not tsp_nearest_neighbor:
+            raise ValueError("❌ Required functions not found in the notebook.")
 
         st.success("✅ **Notebook executed successfully!**")
 
-    except requests.exceptions.RequestException as e:
-        st.error(f"⚠️ Error fetching notebook: {e}")
-    except FileNotFoundError as e:
-        st.error(f"⚠️ Notebook conversion failed: {e}")
     except Exception as e:
         st.error(f"⚠️ Error executing notebook: {e}")
 
     # ---------------------- APPLY CLUSTERING AFTER PARAMETER SELECTION ----------------------
     st.write("🔄 **Applying clustering...**")
-    df = apply_clustering(df, num_clusters, max_points_per_cluster)  # Always apply clustering after selecting parameters
+
+    if apply_clustering:
+        df = apply_clustering(df, num_clusters, max_points_per_cluster)
+    else:
+        st.warning("⚠️ Using backup clustering method (KMeans).")
+        df["Cluster"] = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit_predict(df[["Latitud", "Longitud"]].values)
 
     # ---------------------- ROUTE DISPLAY ----------------------
     agent_number = st.number_input("🔍 Select Agent", min_value=1, max_value=num_clusters, value=1)
@@ -116,9 +121,10 @@ if uploaded_file:
         cluster_data = df[df["Cluster"] == selected_cluster].copy()
 
         if cluster_data.shape[0] > 0:
-            tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
-            cluster_data = cluster_data.iloc[tsp_order]
-            cluster_data["Order"] = range(1, len(cluster_data) + 1)
+            if tsp_nearest_neighbor:
+                tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
+                cluster_data = cluster_data.iloc[tsp_order]
+                cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
             st.write(f"### 📍 Optimized Route for Agent {agent_number}")
             st.dataframe(cluster_data[["Order", "Nombre Comercial", "Latitud", "Longitud"]])
@@ -128,20 +134,4 @@ if uploaded_file:
             cluster_data.to_csv(buffer, index=False)
             st.download_button(label="📥 Download Route as CSV", data=buffer.getvalue(), file_name=f"Route_Agent_{agent_number}.csv", mime="text/csv")
 
-            # ---------------------- DISPLAY MAP ----------------------
-            m = folium.Map(location=[cluster_data.iloc[0]["Latitud"], cluster_data.iloc[0]["Longitud"]], zoom_start=12)
-            for idx, row in cluster_data.iterrows():
-                folium.Marker(
-                    location=[row["Latitud"], row["Longitud"]],
-                    icon=folium.Icon(color="blue", icon="info-sign"),
-                    popup=f"📌 {row['Nombre Comercial']}"
-                ).add_to(m)
-
-            # Show the map
-            st_folium(m, width=800, height=500)
-
-        else:
-            st.error(f"⚠️ No data available for Agent {agent_number}. Try a different one.")
-
-    else:
-        st.error("❌ Clustering failed. Please check your dataset and try again.")
+            # --------
