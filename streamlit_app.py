@@ -52,7 +52,7 @@ st.markdown("<h1>🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
-with st.expander("📄 **Click to View File Requirements**"):
+with st.expander("📄 **Click to deploy the File Requirements**"):
     st.markdown(
         """
         ### 📊 **Excel File Structure**
@@ -86,6 +86,22 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     df["Cluster"] = kmeans.labels_
 
     return df
+
+def tsp_nearest_neighbor(points):
+    """Solves TSP using nearest neighbor heuristic."""
+    if len(points) < 2:
+        return [0] if len(points) == 1 else []
+    
+    remaining = list(range(1, len(points)))
+    route = [0]
+
+    while remaining:
+        last = route[-1]
+        nearest = min(remaining, key=lambda x: geodesic(points[last], points[x]).meters)
+        route.append(nearest)
+        remaining.remove(nearest)
+
+    return route
 
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
@@ -124,6 +140,8 @@ if uploaded_file:
 
     if not cluster_data.empty:
         cluster_data["Original Index"] = cluster_data.index
+        tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
+        cluster_data = cluster_data.iloc[tsp_order].reset_index(drop=True)
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
         # ---------------------- MAP DISPLAY ----------------------
@@ -140,3 +158,13 @@ if uploaded_file:
 
         st.write(f"## 🌍 Route for Agent {agent}")
         st_folium(m, width=800, height=500)
+
+        # ---------------------- Styled CSV EXPORT BUTTON ----------------------
+        csv_buffer = io.StringIO()
+        cluster_data.to_csv(csv_buffer, index=False)
+        st.download_button(
+            "📥 Download Optimized Route",
+            csv_buffer.getvalue(),
+            f"agent_{agent}_optimized_route.csv",
+            "text/csv"
+        )
