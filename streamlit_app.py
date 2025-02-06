@@ -3,9 +3,6 @@ import pandas as pd
 import numpy as np
 import folium
 from streamlit_folium import st_folium
-from sklearn.cluster import KMeans
-from geopy.distance import geodesic
-from sklearn.metrics import pairwise_distances
 import googlemaps
 import io
 import nbformat
@@ -17,7 +14,7 @@ import subprocess
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
 
 st.markdown("<h1>📍 Smart Route Optimization</h1>", unsafe_allow_html=True)
-st.write("A minimalist & intelligent way to optimize travel routes with **Clustering & TSP**, powered by the **Vehicle Scheduling Problem (VSP)** model.")
+st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
@@ -37,7 +34,7 @@ if uploaded_file:
 
     # ---------------------- HANDLE MISSING COORDINATES ----------------------
     if "Latitud" not in df.columns or "Longitud" not in df.columns:
-        st.warning("Your dataset does not contain latitude and longitude. You must enter your **Google Maps API Key** to extract coordinates.")
+        st.warning("Your dataset does not contain latitude and longitude. Enter your **Google Maps API Key** to extract coordinates.")
 
         api_key = st.text_input("🔑 Enter Google Maps API Key")
         if api_key:
@@ -52,84 +49,99 @@ if uploaded_file:
                 except:
                     return None, None
             
-            if "Address" in df.columns:
-                df["Latitud"], df["Longitud"] = zip(*df["Address"].apply(geocode_address))
+            if "Ubicacion" in df.columns:
+                df["Latitud"], df["Longitud"] = zip(*df["Ubicacion"].apply(geocode_address))
                 df.dropna(subset=["Latitud", "Longitud"], inplace=True)
                 st.success("✅ Coordinates extracted successfully!")
             else:
-                st.error("❌ Missing 'Address' column. Cannot extract coordinates.")
+                st.error("❌ Missing 'Ubicacion' column. Cannot extract coordinates.")
 
-    # ---------------------- DOWNLOAD & EXECUTE NOTEBOOK FROM GITHUB ----------------------
-    st.write("🔄 **Fetching and Converting the VSP Notebook from GitHub...**")
+    # ---------------------- DOWNLOAD & EXECUTE NOTEBOOK ----------------------
+    st.write("🔄 **Fetching and Running VSP Notebook from GitHub...**")
 
     notebook_url = "https://raw.githubusercontent.com/DataPicasso/vehicle-scheduling-problem/main/VSP.ipynb"
     notebook_path = "/tmp/VSP.ipynb"
-    script_path = "/tmp/VSP_converted.py"
+    script_path = "/tmp/VSP_script.py"
 
     try:
-        # Download the latest notebook from GitHub
+        # Download latest notebook
         response = requests.get(notebook_url)
-        response.raise_for_status()  # Check for errors
+        response.raise_for_status()
 
         # Save notebook locally
         with open(notebook_path, "w", encoding="utf-8") as f:
             f.write(response.text)
 
-        # Convert notebook to Python script (fix output naming issue)
-        subprocess.run(["jupyter", "nbconvert", "--to", "script", notebook_path], check=True)
+        # Convert notebook to Python script
+        subprocess.run(
+            ["jupyter", "nbconvert", "--to", "script", "--output", script_path.replace(".py", ""), notebook_path],
+            check=True
+        )
 
-        # Get the actual converted script name
-        converted_script_path = notebook_path.replace(".ipynb", ".py")
-
-        # Debugging step: check if the file exists
+        # Ensure the script exists
+        converted_script_path = script_path
         if not os.path.exists(converted_script_path):
             raise FileNotFoundError(f"🚨 Converted script not found: {converted_script_path}")
 
         # Execute the converted Python script
+        exec_globals = {}
         with open(converted_script_path, "r", encoding="utf-8") as script_file:
-            exec_globals = {}
             exec(script_file.read(), exec_globals)
 
-        # Ensure the TSP function is available
-        if "tsp_nearest_neighbor" not in exec_globals:
-            raise ValueError("❌ 'tsp_nearest_neighbor' function not found in the notebook.")
+        # Ensure required functions exist
+        if "apply_clustering" not in exec_globals or "tsp_nearest_neighbor" not in exec_globals:
+            raise ValueError("❌ Required functions not found in the notebook.")
 
+        apply_clustering = exec_globals["apply_clustering"]
         tsp_nearest_neighbor = exec_globals["tsp_nearest_neighbor"]
-        st.success("✅ **Notebook converted and executed successfully from GitHub!**")
+
+        st.success("✅ **Notebook executed successfully!**")
+
+        # ---------------------- APPLY CLUSTERING ----------------------
+        st.write("🔄 **Applying clustering...**")
+        df = apply_clustering(df, num_clusters, max_points_per_cluster)
 
     except requests.exceptions.RequestException as e:
-        st.error(f"⚠️ Error fetching the notebook: {e}")
+        st.error(f"⚠️ Error fetching notebook: {e}")
     except FileNotFoundError as e:
         st.error(f"⚠️ Notebook conversion failed: {e}")
     except Exception as e:
-        st.error(f"⚠️ Error executing the notebook: {e}")
+        st.error(f"⚠️ Error executing notebook: {e}")
 
     # ---------------------- ROUTE DISPLAY ----------------------
     agent_number = st.number_input("🔍 Select Agent", min_value=1, max_value=num_clusters, value=1)
     selected_cluster = agent_number - 1
-    cluster_data = df[df["Cluster"] == selected_cluster].copy()
 
-    if cluster_data.shape[0] > 0:
-        tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
-        cluster_data = cluster_data.iloc[tsp_order]
-        cluster_data["Order"] = range(1, len(cluster_data) + 1)
+    if "Cluster" in df.columns:
+        cluster_data = df[df["Cluster"] == selected_cluster].copy()
 
-        # ---------------------- EXPORT CSV ----------------------
-        buffer = io.BytesIO()
-        cluster_data.to_csv(buffer, index=False)
-        st.download_button(label="📥 Download Route as CSV", data=buffer.getvalue(), file_name=f"Route_Agent_{agent_number}.csv", mime="text/csv")
+        if cluster_data.shape[0] > 0:
+            tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
+            cluster_data = cluster_data.iloc[tsp_order]
+            cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
-        # ---------------------- DISPLAY MAP ----------------------
-        m = folium.Map(location=[cluster_data.iloc[0]["Latitud"], cluster_data.iloc[0]["Longitud"]], zoom_start=12)
-        for idx, row in cluster_data.iterrows():
-            folium.Marker(
-                location=[row["Latitud"], row["Longitud"]],
-                icon=folium.Icon(color="blue", icon="info-sign"),
-                popup=f"Order {row['Order']}: {row['Nombre Comercial']}"
-            ).add_to(m)
+            st.write(f"### 📍 Optimized Route for Agent {agent_number}")
+            st.dataframe(cluster_data[["Order", "Nombre Comercial", "Latitud", "Longitud"]])
 
-        # Show the map
-        st_folium(m, width=800, height=500)
+            # ---------------------- EXPORT CSV ----------------------
+            buffer = io.BytesIO()
+            cluster_data.to_csv(buffer, index=False)
+            st.download_button(label="📥 Download Route as CSV", data=buffer.getvalue(), file_name=f"Route_Agent_{agent_number}.csv", mime="text/csv")
+
+            # ---------------------- DISPLAY MAP ----------------------
+            m = folium.Map(location=[cluster_data.iloc[0]["Latitud"], cluster_data.iloc[0]["Longitud"]], zoom_start=12)
+            for idx, row in cluster_data.iterrows():
+                folium.Marker(
+                    location=[row["Latitud"], row["Longitud"]],
+                    icon=folium.Icon(color="blue", icon="info-sign"),
+                    popup=f"📌 {row['Nombre Comercial']}"
+                ).add_to(m)
+
+            # Show the map
+            st_folium(m, width=800, height=500)
+
+        else:
+            st.error(f"⚠️ No data available for Agent {agent_number}. Try a different one.")
 
     else:
-        st.error(f"No data available for Agent {agent_number}. Try a different one.")
+        st.error("❌ Clustering failed. Please check your dataset and try again.")
