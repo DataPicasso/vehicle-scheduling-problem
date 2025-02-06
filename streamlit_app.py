@@ -11,6 +11,7 @@ import io
 import nbformat
 import requests
 import os
+import subprocess
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
@@ -58,30 +59,36 @@ if uploaded_file:
             else:
                 st.error("❌ Missing 'Address' column. Cannot extract coordinates.")
 
-    # ---------------------- LOAD & EXECUTE NOTEBOOK FROM GITHUB ----------------------
-    st.write("🔄 **Fetching the VSP Notebook from GitHub...**")
+    # ---------------------- DOWNLOAD & EXECUTE NOTEBOOK FROM GITHUB ----------------------
+    st.write("🔄 **Fetching and Converting the VSP Notebook from GitHub...**")
 
     notebook_url = "https://raw.githubusercontent.com/DataPicasso/vehicle-scheduling-problem/main/VSP.ipynb"
+    notebook_path = "/tmp/VSP.ipynb"
+    script_path = "/tmp/VSP_converted.py"
 
     try:
+        # Download the latest notebook from GitHub
         response = requests.get(notebook_url)
         response.raise_for_status()  # Check for errors
 
-        # Read the notebook
-        nb = nbformat.reads(response.text, as_version=4)
+        # Save notebook locally
+        with open(notebook_path, "w", encoding="utf-8") as f:
+            f.write(response.text)
 
-        # Execute notebook cells
-        exec_globals = {}
-        for cell in nb.cells:
-            if cell.cell_type == "code":
-                exec(cell.source, exec_globals)
+        # Convert notebook to Python script
+        subprocess.run(["jupyter", "nbconvert", "--to", "script", notebook_path, "--output", script_path], check=True)
+
+        # Execute the Python script
+        with open(script_path + ".py", "r", encoding="utf-8") as script_file:
+            exec_globals = {}
+            exec(script_file.read(), exec_globals)
 
         # Ensure the TSP function is available
         if "tsp_nearest_neighbor" not in exec_globals:
             raise ValueError("❌ 'tsp_nearest_neighbor' function not found in the notebook.")
 
         tsp_nearest_neighbor = exec_globals["tsp_nearest_neighbor"]
-        st.success("✅ **Notebook loaded and executed successfully from GitHub!**")
+        st.success("✅ **Notebook converted and executed successfully from GitHub!**")
 
     except requests.exceptions.RequestException as e:
         st.error(f"⚠️ Error fetching the notebook: {e}")
