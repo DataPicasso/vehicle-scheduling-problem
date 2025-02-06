@@ -25,19 +25,27 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
 
     # Balance clusters so that each cluster has at most max_points_per_cluster
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
-    centroids = kmeans.cluster_centers_
+    centroids = np.array(kmeans.cluster_centers_)
 
     for cluster_id, points in clusters_dict.items():
         while len(points) > max_points_per_cluster:
             excess_point = points.pop()
-            distances = np.linalg.norm(centroids - df.loc[excess_point, ["Latitud", "Longitud"]].values, axis=1)
-            nearest_cluster = np.argsort(distances)[1]  # Avoid reassigning to the same cluster
+            excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1)
+            
+            # Compute distances between the excess point and all cluster centroids
+            distances = np.linalg.norm(centroids - excess_coords, axis=1)
+            
+            # Find nearest cluster (excluding the same cluster)
+            nearest_cluster = np.argsort(distances)[1]  
+            
+            # Move the excess point to the nearest cluster
             clusters_dict[nearest_cluster].append(excess_point)
 
-    new_labels = np.zeros(len(df))
+    # Update cluster assignments
+    new_labels = np.zeros(len(df), dtype=int)
     for cluster_id, indices in clusters_dict.items():
         new_labels[indices] = cluster_id
-    df["Cluster"] = new_labels.astype(int)
+    df["Cluster"] = new_labels
 
     return df
 
