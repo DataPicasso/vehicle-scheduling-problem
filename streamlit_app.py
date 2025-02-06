@@ -1,8 +1,6 @@
-import streamlit as st
-
-# Must be first!
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
 
+import streamlit as st
 import pandas as pd
 import numpy as np
 import folium
