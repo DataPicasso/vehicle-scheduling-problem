@@ -7,3 +7,4 @@ folium
 scikit-learn
 geopy
 googlemaps
+openpyxl
