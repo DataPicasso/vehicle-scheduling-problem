@@ -75,11 +75,11 @@ if uploaded_file:
         with open(notebook_path, "w", encoding="utf-8") as f:
             f.write(response.text)
 
-        # Convert notebook to Python script
-        subprocess.run(["jupyter", "nbconvert", "--to", "script", notebook_path, "--output", script_path], check=True)
+        # Convert notebook to Python script (removes extra .py)
+        subprocess.run(["jupyter", "nbconvert", "--to", "script", notebook_path, "--output", script_path.replace(".py", "")], check=True)
 
         # Execute the Python script
-        with open(script_path + ".py", "r", encoding="utf-8") as script_file:
+        with open(script_path, "r", encoding="utf-8") as script_file:
             exec_globals = {}
             exec(script_file.read(), exec_globals)
 
