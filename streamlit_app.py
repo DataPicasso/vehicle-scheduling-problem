@@ -1,10 +1,7 @@
 import streamlit as st
-try:
-    import nbformat
-except ModuleNotFoundError:
-    import os
-    os.system("pip install nbformat")
-    import nbformat
+
+# Must be first!
+st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
 
 import pandas as pd
 import numpy as np
@@ -17,6 +14,7 @@ import googlemaps
 import io
 import os
 import subprocess
+
 
 # ---------------------- CUSTOM STYLING ----------------------
 st.markdown("""
