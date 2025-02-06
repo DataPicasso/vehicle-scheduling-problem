@@ -85,12 +85,17 @@ if uploaded_file:
         # Ensure the script exists
         converted_script_path = script_path
         if not os.path.exists(converted_script_path):
+            st.error(f"🚨 Converted script not found: {converted_script_path}")
             raise FileNotFoundError(f"🚨 Converted script not found: {converted_script_path}")
+
+        # Debugging: Read the script content
+        with open(converted_script_path, "r", encoding="utf-8") as script_file:
+            script_content = script_file.read()
+        st.write("📝 **Script Content Preview:**", script_content[:500])  # Show first 500 chars for debugging
 
         # Execute the converted Python script
         exec_globals = {}
-        with open(converted_script_path, "r", encoding="utf-8") as script_file:
-            exec(script_file.read(), exec_globals)
+        exec(script_content, exec_globals)
 
         # Ensure required functions exist
         apply_clustering = exec_globals.get("apply_clustering")
