@@ -9,6 +9,7 @@ from sklearn.metrics import pairwise_distances
 import googlemaps
 import io
 import nbformat
+import requests
 import os
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
@@ -57,33 +58,35 @@ if uploaded_file:
             else:
                 st.error("❌ Missing 'Address' column. Cannot extract coordinates.")
 
-    # ---------------------- EXECUTE NOTEBOOK ----------------------
-    st.write("🔄 **Loading the VSP Notebook...**")
+    # ---------------------- LOAD & EXECUTE NOTEBOOK FROM GITHUB ----------------------
+    st.write("🔄 **Fetching the VSP Notebook from GitHub...**")
 
-    notebook_path = "/mnt/data/VSP.ipynb"
+    notebook_url = "https://raw.githubusercontent.com/DataPicasso/vehicle-scheduling-problem/main/VSP.ipynb"
 
-    if os.path.exists(notebook_path):
-        try:
-            with open(notebook_path, "r", encoding="utf-8") as f:
-                nb = nbformat.read(f, as_version=4)
+    try:
+        response = requests.get(notebook_url)
+        response.raise_for_status()  # Check for errors
 
-            # Execute the notebook
-            exec_globals = {}
-            for cell in nb.cells:
-                if cell.cell_type == "code":
-                    exec(cell.source, exec_globals)
+        # Read the notebook
+        nb = nbformat.reads(response.text, as_version=4)
 
-            # Ensure the TSP function is loaded
-            if "tsp_nearest_neighbor" not in exec_globals:
-                raise ValueError("❌ 'tsp_nearest_neighbor' function not found in the notebook.")
+        # Execute notebook cells
+        exec_globals = {}
+        for cell in nb.cells:
+            if cell.cell_type == "code":
+                exec(cell.source, exec_globals)
 
-            tsp_nearest_neighbor = exec_globals["tsp_nearest_neighbor"]
-            st.success("✅ **Notebook executed successfully!**")
+        # Ensure the TSP function is available
+        if "tsp_nearest_neighbor" not in exec_globals:
+            raise ValueError("❌ 'tsp_nearest_neighbor' function not found in the notebook.")
 
-        except Exception as e:
-            st.error(f"⚠️ Error executing the notebook: {e}")
-    else:
-        st.error("❌ Notebook file not found. Please upload the VSP notebook.")
+        tsp_nearest_neighbor = exec_globals["tsp_nearest_neighbor"]
+        st.success("✅ **Notebook loaded and executed successfully from GitHub!**")
+
+    except requests.exceptions.RequestException as e:
+        st.error(f"⚠️ Error fetching the notebook: {e}")
+    except Exception as e:
+        st.error(f"⚠️ Error executing the notebook: {e}")
 
     # ---------------------- ROUTE DISPLAY ----------------------
     agent_number = st.number_input("🔍 Select Agent", min_value=1, max_value=num_clusters, value=1)
