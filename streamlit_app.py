@@ -14,15 +14,31 @@ st.markdown("<h1>📍 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- CORE FUNCTIONS ----------------------
-def apply_clustering(df, num_clusters, max_points_per_cluster):
-    """Cluster locations using KMeans with distance matrix optimization."""
+def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
+    """Apply balanced clustering to distribute points fairly among agents."""
     coords = df[["Latitud", "Longitud"]].values
-    
-    # Add small noise to prevent identical points from breaking KMeans
+
+    # Ensure points are not too close to break KMeans
     jitter = np.random.normal(0, 0.00001, coords.shape)
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
-    
     df["Cluster"] = kmeans.labels_
+
+    # Balance clusters so that each cluster has at most max_points_per_cluster
+    clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
+    centroids = kmeans.cluster_centers_
+
+    for cluster_id, points in clusters_dict.items():
+        while len(points) > max_points_per_cluster:
+            excess_point = points.pop()
+            distances = np.linalg.norm(centroids - df.loc[excess_point, ["Latitud", "Longitud"]].values, axis=1)
+            nearest_cluster = np.argsort(distances)[1]  # Avoid reassigning to the same cluster
+            clusters_dict[nearest_cluster].append(excess_point)
+
+    new_labels = np.zeros(len(df))
+    for cluster_id, indices in clusters_dict.items():
+        new_labels[indices] = cluster_id
+    df["Cluster"] = new_labels.astype(int)
+
     return df
 
 def tsp_nearest_neighbor(points):
@@ -75,7 +91,7 @@ if uploaded_file:
             df = df.dropna(subset=["Latitud", "Longitud"])
 
     # ---------------------- CLUSTERING ----------------------
-    df = apply_clustering(df, num_clusters, max_points)
+    df = apply_balanced_clustering(df, num_clusters, max_points)
     
     # ---------------------- ROUTE VISUALIZATION ----------------------
     agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
