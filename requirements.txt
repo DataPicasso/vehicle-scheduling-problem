@@ -1,0 +1,8 @@
+streamlit
+nbformat
+pandas
+numpy
+folium
+scikit-learn
+geopy
+googlemaps
