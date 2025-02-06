@@ -10,12 +10,25 @@ from geopy.distance import geodesic
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🚀 Smart Route Optimization", layout="wide")
+
+# Apply white background & black text
+st.markdown(
+    """
+    <style>
+        body, .stApp { background-color: white !important; color: black !important; }
+        h1, h2, h3, h4, h5, h6, p, label, .stButton>button { color: black !important; }
+        .stDataFrame, .stTable, .stDownloadButton { color: black !important; }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.markdown("<h1>📍 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
-    """Applies balanced clustering by ensuring an even distribution of points close to the max limit (281)."""
+    """Applies balanced clustering to evenly distribute points near the set limit."""
     coords = df[["Latitud", "Longitud"]].values
 
     # Small noise added to avoid KMeans breaking due to identical points
@@ -31,40 +44,32 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     iterations = 0
     min_points_per_cluster = max_points_per_cluster // 2  # Ensuring balance
 
-    # ---------------------- BALANCE CLUSTERS ----------------------
     while iterations < max_iterations:
-        # Identify clusters that have too many or too few points
         overfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
         underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < min_points_per_cluster}
 
-        # Stop if everything is balanced
         if not overfilled_clusters and not underfilled_clusters:
-            break
+            break  # Stop if all clusters are balanced
 
-        # Move points from overfilled to underfilled clusters
         for cluster_id, point_count in overfilled_clusters.items():
             if point_count <= max_points_per_cluster:
-                continue  # Skip if already balanced
+                continue  
 
-            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]  # Get excess
-            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]  # Keep only the allowed
+            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]  
+            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]  
 
             for excess_point in excess_points:
-                # Compute distances to all clusters
                 excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
                 distances = np.linalg.norm(centroids - excess_coords, axis=1)
 
-                # Find the nearest underfilled cluster
                 sorted_clusters = np.argsort(distances)
                 nearest_cluster = next((c for c in sorted_clusters if c in underfilled_clusters), None)
 
-                # Assign the excess point to the nearest underfilled cluster
                 if nearest_cluster is not None:
                     clusters_dict[nearest_cluster].append(excess_point)
 
         iterations += 1
 
-    # Update cluster assignments
     new_labels = np.zeros(len(df), dtype=int)
     for cluster_id, indices in clusters_dict.items():
         new_labels[indices] = cluster_id
@@ -129,7 +134,6 @@ if uploaded_file:
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
     if not cluster_data.empty:
-        # Save original order before applying TSP
         cluster_data["Original Index"] = cluster_data.index
 
         # Get optimized order using TSP
@@ -142,11 +146,10 @@ if uploaded_file:
         # ---------------------- DISPLAY ALL POINTS BEFORE ROUTE ----------------------
         m = folium.Map(location=cluster_data[["Latitud", "Longitud"]].mean().tolist(), zoom_start=12)
 
-        # Add all locations to the map
         for _, row in cluster_data.iterrows():
             folium.Marker(
                 [row["Latitud"], row["Longitud"]],
-                popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}"
+                popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}<br>Order: {row['Order']}"
             ).add_to(m)
 
         # Draw route
@@ -155,7 +158,7 @@ if uploaded_file:
         ).add_to(m)
 
         # Display map
-        st.write(f"## 🗺️ Route for Agent {agent}")
+        st.write(f"## 🗺️ Optimized Route for Agent {agent}")
         st_folium(m, width=800, height=500)
 
         # ---------------------- CSV EXPORT ----------------------
