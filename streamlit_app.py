@@ -30,14 +30,14 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     for cluster_id, points in clusters_dict.items():
         while len(points) > max_points_per_cluster:
             excess_point = points.pop()
-            excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1)
-            
+            excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.astype(float)
+
             # Compute distances between the excess point and all cluster centroids
-            distances = np.linalg.norm(centroids - excess_coords, axis=1)
-            
+            distances = np.linalg.norm(centroids - excess_coords.reshape(1, -1), axis=1)
+
             # Find nearest cluster (excluding the same cluster)
-            nearest_cluster = np.argsort(distances)[1]  
-            
+            nearest_cluster = np.argsort(distances)[1]  # Avoid reassigning to the same cluster
+
             # Move the excess point to the nearest cluster
             clusters_dict[nearest_cluster].append(excess_point)
 
@@ -127,4 +127,3 @@ if uploaded_file:
             f"agent_{agent}_route.csv",
             "text/csv"
         )
- 
