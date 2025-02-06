@@ -51,6 +51,30 @@ st.markdown(
 st.markdown("<h1>🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
+# ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
+with st.expander("📄 **Click to View File Requirements**"):
+    st.markdown(
+        """
+        ### 📊 **Excel File Structure**
+        The Excel file should have the following format:
+        - The **sheet name** must be `Sheet1`.
+        - The **headers** should start from the **2nd row** with these columns:
+        
+        | A | B | C | D | E | F | G | H |
+        |---|---|---|---|---|---|---|---|
+        |   |   |   |   |   |   |   |   |
+        | 2 | Nombre Comercial | Calle | No. | Sector | Municipio | Provincia | **Latitud** | **Longitud** |
+        | 3 | Example Name | Example St. | 123 | Sector 1 | City 1 | Province 1 | **18.1234** | **-69.9876** |
+        | 4 | Example Name 2 | Another St. | 456 | Sector 2 | City 2 | Province 2 | **18.5678** | **-69.6543** |
+
+        **⚠️ Important Note:**  
+        - If `Latitud` and `Longitud` are **missing**, you can retrieve them using the **Google Maps API** in this platform.
+        - The more accurate the coordinates, the better the clustering and routing results.
+
+        """,
+        unsafe_allow_html=True
+    )
+
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     """Applies balanced clustering to evenly distribute points near the set limit."""
@@ -61,60 +85,7 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
     df["Cluster"] = kmeans.labels_
 
-    # Group points into cluster lists
-    clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
-    centroids = np.array(kmeans.cluster_centers_)
-
-    max_iterations = 100  # Prevent infinite loops
-    iterations = 0
-
-    while iterations < max_iterations:
-        overfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
-        underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < max_points_per_cluster // 2}
-
-        if not overfilled_clusters and not underfilled_clusters:
-            break
-
-        for cluster_id, point_count in overfilled_clusters.items():
-            if point_count <= max_points_per_cluster:
-                continue
-
-            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
-            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
-
-            for excess_point in excess_points:
-                excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
-                distances = np.linalg.norm(centroids - excess_coords, axis=1)
-                sorted_clusters = np.argsort(distances)
-                nearest_cluster = next((c for c in sorted_clusters if c in underfilled_clusters), None)
-
-                if nearest_cluster is not None:
-                    clusters_dict[nearest_cluster].append(excess_point)
-
-        iterations += 1
-
-    new_labels = np.zeros(len(df), dtype=int)
-    for cluster_id, indices in clusters_dict.items():
-        new_labels[indices] = cluster_id
-    df["Cluster"] = new_labels
-
     return df
-
-def tsp_nearest_neighbor(points):
-    """Solves TSP using nearest neighbor heuristic."""
-    if len(points) < 2:
-        return [0] if len(points) == 1 else []
-    
-    remaining = list(range(1, len(points)))
-    route = [0]
-
-    while remaining:
-        last = route[-1]
-        nearest = min(remaining, key=lambda x: geodesic(points[last], points[x]).meters)
-        route.append(nearest)
-        remaining.remove(nearest)
-
-    return route
 
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
@@ -136,8 +107,8 @@ if uploaded_file:
     if {"Latitud", "Longitud"}.issubset(df.columns):
         df = df.dropna(subset=["Latitud", "Longitud"])
     else:
-        st.warning("Coordinates missing! Enter Google Maps API Key to geocode addresses.")
-        api_key = st.text_input("🔑 Google Maps API Key")
+        st.warning("⚠️ **Missing Coordinates!** Enter Google Maps API Key to fetch them.")
+        api_key = st.text_input("🔑 **Google Maps API Key**")
 
         if api_key and "Ubicacion" in df.columns:
             gmaps = googlemaps.Client(key=api_key)
@@ -153,10 +124,9 @@ if uploaded_file:
 
     if not cluster_data.empty:
         cluster_data["Original Index"] = cluster_data.index
-        tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
-        cluster_data = cluster_data.iloc[tsp_order].reset_index(drop=True)
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
+        # ---------------------- MAP DISPLAY ----------------------
         m = folium.Map(location=cluster_data[["Latitud", "Longitud"]].mean().tolist(), zoom_start=12)
         for _, row in cluster_data.iterrows():
             folium.Marker(
