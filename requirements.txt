@@ -1,5 +1,6 @@
 streamlit
 nbformat
+streamlit_folium
 pandas
 numpy
 folium
