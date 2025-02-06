@@ -64,7 +64,7 @@ if uploaded_file:
     notebook_path = "/tmp/VSP.ipynb"
     script_path = "/tmp/VSP_script.py"
 
-    apply_clustering = None  # Placeholder for the function
+    apply_clustering = None  # Placeholder for clustering function
     tsp_nearest_neighbor = None  # Placeholder for TSP function
 
     try:
@@ -109,7 +109,7 @@ if uploaded_file:
     except Exception as e:
         st.error(f"⚠️ Error executing notebook: {e}")
 
-    # ---------------------- APPLY CLUSTERING AFTER PARAMETER SELECTION ----------------------
+    # ---------------------- APPLY CLUSTERING ----------------------
     st.write("🔄 **Applying clustering...**")
 
     if apply_clustering:
@@ -159,3 +159,4 @@ if uploaded_file:
 
     else:
         st.error("❌ Clustering failed. Please check your dataset and try again.")
+
