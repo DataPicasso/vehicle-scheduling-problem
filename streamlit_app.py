@@ -28,9 +28,6 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     centroids = np.array(kmeans.cluster_centers_)
 
     # Balance clusters by redistributing excess points
-    total_points = len(df)
-    ideal_size = total_points // num_clusters  # Target locations per agent
-
     max_iterations = 100  # Prevent infinite loops
     iterations = 0
 
@@ -116,19 +113,32 @@ if uploaded_file:
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
     if not cluster_data.empty:
-        route_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
-        cluster_data = cluster_data.iloc[route_order]
+        # Save original order before applying TSP
+        cluster_data["Original Index"] = cluster_data.index
+
+        # Get optimized order using TSP
+        tsp_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
+        
+        # Apply TSP order
+        cluster_data = cluster_data.iloc[tsp_order].reset_index(drop=True)
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
-        # Map Visualization
+        # ---------------------- DISPLAY ALL POINTS BEFORE ROUTE ----------------------
         m = folium.Map(location=cluster_data[["Latitud", "Longitud"]].mean().tolist(), zoom_start=12)
+
+        # Add all locations to the map
         for _, row in cluster_data.iterrows():
             folium.Marker(
                 [row["Latitud"], row["Longitud"]],
-                popup=f"{row['Nombre Comercial']}<br>Order: {row['Order']}"
+                popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}"
             ).add_to(m)
 
-        # Display
+        # Draw route
+        folium.PolyLine(
+            cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1
+        ).add_to(m)
+
+        # Display map
         st.write(f"## 🗺️ Route for Agent {agent}")
         st_folium(m, width=800, height=500)
 
@@ -136,8 +146,8 @@ if uploaded_file:
         csv_buffer = io.StringIO()
         cluster_data.to_csv(csv_buffer, index=False)
         st.download_button(
-            "📥 Download Route",
+            "📥 Download Optimized Route",
             csv_buffer.getvalue(),
-            f"agent_{agent}_route.csv",
+            f"agent_{agent}_optimized_route.csv",
             "text/csv"
         )
