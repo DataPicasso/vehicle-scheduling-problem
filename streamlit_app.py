@@ -57,7 +57,7 @@ with st.expander("📄 **Click to see File Requirements**"):
         """
         ### 📊 **Excel File Structure**
         The Excel file should have the following format:
-        - The **sheet name** must be `Sheet1`.
+        - The **sheet name** must be Sheet1.
         - The **headers** should start from the **2nd row** with these columns:
         
         | A | B | C | D | E | F | G | H | I |
@@ -68,11 +68,61 @@ with st.expander("📄 **Click to see File Requirements**"):
         | 4 | Example Name 2 | Another St. | 456 | Sector 2 | City 2 | Province 2 | **18.5678** | **-69.6543** |
 
         **⚠️ Important Note:**  
-        - If `Latitud` and `Longitud` are **missing**, you can retrieve them using the **Google Maps API** in this platform.
+        - If Latitud and Longitud are **missing**, you can retrieve them using the **Google Maps API** in this platform.
         - The more accurate the coordinates, the better the clustering and routing results.
+
         """,
         unsafe_allow_html=True
     )
+
+# ---------------------- CORE FUNCTIONS ----------------------
+def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
+    """Applies balanced clustering to evenly distribute points near the set limit."""
+    coords = df[["Latitud", "Longitud"]].values
+
+    # Small noise added to avoid KMeans breaking due to identical points
+    jitter = np.random.normal(0, 0.00001, coords.shape)
+    kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
+    df["Cluster"] = kmeans.labels_
+
+    # Group points into cluster lists
+    clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
+    centroids = np.array(kmeans.cluster_centers_)
+
+    max_iterations = 100  # Prevent infinite loops
+    iterations = 0
+
+    while iterations < max_iterations:
+        overfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
+        underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < max_points_per_cluster // 2}
+
+        if not overfilled_clusters and not underfilled_clusters:
+            break
+
+        for cluster_id, point_count in overfilled_clusters.items():
+            if point_count <= max_points_per_cluster:
+                continue
+
+            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
+            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
+
+            for excess_point in excess_points:
+                excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
+                distances = np.linalg.norm(centroids - excess_coords, axis=1)
+                sorted_clusters = np.argsort(distances)
+                nearest_cluster = next((c for c in sorted_clusters if c in underfilled_clusters), None)
+
+                if nearest_cluster is not None:
+                    clusters_dict[nearest_cluster].append(excess_point)
+
+        iterations += 1
+
+    new_labels = np.zeros(len(df), dtype=int)
+    for cluster_id, indices in clusters_dict.items():
+        new_labels[indices] = cluster_id
+    df["Cluster"] = new_labels
+
+    return df
 
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
@@ -91,12 +141,8 @@ if uploaded_file:
     with col2:
         max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 50, 500, 281)
 
-    df = df.dropna(subset=["Latitud", "Longitud"])  # Ensure valid data
-    df = df.astype({"Latitud": float, "Longitud": float})  # Ensure correct types
+    df = apply_balanced_clustering(df, num_clusters, max_points_per_cluster)
 
-    # ---------------------- CLUSTER SELECTION ----------------------
-    df["Cluster"] = KMeans(n_clusters=num_clusters, random_state=42, n_init=10).fit(df[["Latitud", "Longitud"]]).labels_
-    
     agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
@@ -115,28 +161,21 @@ if uploaded_file:
         cluster_data = cluster_data.loc[tsp_order].reset_index(drop=True)
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
-        # ---------------------- MAP DISPLAY WITH AUTO-ZOOM ----------------------
-        m = folium.Map(zoom_start=5)  # Zoom inicial más alejado
+        # ---------------------- MAP DISPLAY WITH FIX ----------------------
+        m = folium.Map(zoom_start=12)
 
-        # Agregar todos los puntos al mapa
+        # Add markers and store bounds
+        bounds = []
         for _, row in cluster_data.iterrows():
-            folium.Marker(
-                [row["Latitud"], row["Longitud"]],
-                popup=f"{row['Nombre Comercial']}<br>Order: {row['Order']}"
-            ).add_to(m)
+            loc = [row["Latitud"], row["Longitud"]]
+            folium.Marker(loc, popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}").add_to(m)
+            bounds.append(loc)
 
-        # Dibujar la ruta con líneas
         folium.PolyLine(cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1).add_to(m)
 
-        # Ajustar la vista para mostrar **todas** las ubicaciones
-        min_lat, max_lat = cluster_data["Latitud"].astype(float).min(), cluster_data["Latitud"].astype(float).max()
-        min_lon, max_lon = cluster_data["Longitud"].astype(float).min(), cluster_data["Longitud"].astype(float).max()
-        m.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]])
+        m.fit_bounds(bounds)  # Ensure full view of all points
 
         st.write(f"## 🌍 Route for Agent {agent}")
         st_folium(m, width=800, height=500)
 
-        # ---------------------- DOWNLOAD ROUTE CSV ----------------------
-        csv_buffer = io.StringIO()
-        cluster_data.to_csv(csv_buffer, index=False)
-        st.download_button("📥 Download Optimized Route", csv_buffer.getvalue(), f"agent_{agent}_optimized_route.csv", "text/csv")
+        st.download_button("📥 Download Optimized Route", cluster_data.to_csv(index=False), f"agent_{agent}_optimized_route.csv", "text/csv")
