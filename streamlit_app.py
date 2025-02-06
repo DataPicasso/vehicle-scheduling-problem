@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 from geopy.distance import geodesic
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
-st.set_page_config(page_title="🚀 AI Route Optimization", layout="wide")
+st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 # Apply light Apple-like design
 st.markdown(
@@ -48,7 +48,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<h1>🚀 AI Route Optimization</h1>", unsafe_allow_html=True)
+st.markdown("<h1> 🏎️ AI Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
