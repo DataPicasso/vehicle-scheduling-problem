@@ -15,7 +15,7 @@ st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
-    """Applies balanced clustering by redistributing excess points to maintain equal clusters."""
+    """Applies balanced clustering by ensuring an even distribution of points close to the max limit (281)."""
     coords = df[["Latitud", "Longitud"]].values
 
     # Small noise added to avoid KMeans breaking due to identical points
@@ -27,26 +27,42 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
     centroids = np.array(kmeans.cluster_centers_)
 
-    # Balance clusters by redistributing excess points
     max_iterations = 100  # Prevent infinite loops
     iterations = 0
+    min_points_per_cluster = max_points_per_cluster // 2  # Ensuring balance
 
-    for cluster_id, points in clusters_dict.items():
-        while len(points) > max_points_per_cluster and iterations < max_iterations:
-            excess_point = points.pop()
+    # ---------------------- BALANCE CLUSTERS ----------------------
+    while iterations < max_iterations:
+        # Identify clusters that have too many or too few points
+        overfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) > max_points_per_cluster}
+        underfilled_clusters = {c: len(p) for c, p in clusters_dict.items() if len(p) < min_points_per_cluster}
 
-            # Ensure excess_coords is a 2D NumPy array
-            excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
+        # Stop if everything is balanced
+        if not overfilled_clusters and not underfilled_clusters:
+            break
 
-            # Compute distances
-            distances = np.linalg.norm(centroids - excess_coords, axis=1)
+        # Move points from overfilled to underfilled clusters
+        for cluster_id, point_count in overfilled_clusters.items():
+            if point_count <= max_points_per_cluster:
+                continue  # Skip if already balanced
 
-            # Find nearest cluster (excluding the same one)
-            nearest_cluster = np.argsort(distances)[1]
+            excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]  # Get excess
+            clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]  # Keep only the allowed
 
-            # Move the excess point
-            clusters_dict[nearest_cluster].append(excess_point)
-            iterations += 1
+            for excess_point in excess_points:
+                # Compute distances to all clusters
+                excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
+                distances = np.linalg.norm(centroids - excess_coords, axis=1)
+
+                # Find the nearest underfilled cluster
+                sorted_clusters = np.argsort(distances)
+                nearest_cluster = next((c for c in sorted_clusters if c in underfilled_clusters), None)
+
+                # Assign the excess point to the nearest underfilled cluster
+                if nearest_cluster is not None:
+                    clusters_dict[nearest_cluster].append(excess_point)
+
+        iterations += 1
 
     # Update cluster assignments
     new_labels = np.zeros(len(df), dtype=int)
@@ -89,7 +105,7 @@ if uploaded_file:
     with col1:
         num_clusters = st.slider("🔹 Number of Agents", 2, 20, 10)
     with col2:
-        max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 10, 500, 50)
+        max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 50, 500, 281)
 
     # ---------------------- COORDINATE VALIDATION ----------------------
     if {"Latitud", "Longitud"}.issubset(df.columns):
