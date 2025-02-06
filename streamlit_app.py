@@ -25,6 +25,11 @@ uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type
 if uploaded_file:
     df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
 
+    # Ensure consistent data types in the DataFrame
+    for col in df.columns:
+        if df[col].dtype == 'object':
+            df[col] = df[col].astype(str)  # Convert all object columns to strings
+
     st.write("✅ **File uploaded successfully!** Preview:")
     st.dataframe(df.head())
 
