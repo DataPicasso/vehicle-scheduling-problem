@@ -14,7 +14,7 @@ st.markdown("<h1>📍 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- CORE FUNCTIONS ----------------------
-def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
+def apply_balanced_clustering(df, num_clusters):
     """Apply balanced clustering to fairly distribute points among agents."""
     coords = df[["Latitud", "Longitud"]].values
 
@@ -23,17 +23,20 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
     df["Cluster"] = kmeans.labels_
 
-    # Balance clusters
+    # Balance clusters by redistributing excess points
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
     centroids = np.array(kmeans.cluster_centers_)
-
-    max_iterations = 100  # Prevents infinite loops
+    
+    total_points = len(df)
+    ideal_size = total_points // num_clusters  # Ideal locations per cluster
+    
+    max_iterations = 100  # Prevent infinite loops
     iterations = 0
 
     for cluster_id, points in clusters_dict.items():
-        while len(points) > max_points_per_cluster and iterations < max_iterations:
+        while len(points) > ideal_size and iterations < max_iterations:
             excess_point = points.pop()
-            
+
             # Ensure excess_coords is a 2D NumPy array
             excess_coords = df.loc[excess_point, ["Latitud", "Longitud"]].values.reshape(1, -1).astype(float)
 
@@ -87,8 +90,6 @@ if uploaded_file:
     col1, col2 = st.columns(2)
     with col1:
         num_clusters = st.slider("🔹 Number of Agents", 2, 20, 10)
-    with col2:
-        max_points = st.slider("🔹 Max Locations per Agent", 50, 500, 281)
 
     # ---------------------- COORDINATE VALIDATION ----------------------
     if {"Latitud", "Longitud"}.issubset(df.columns):
@@ -105,7 +106,7 @@ if uploaded_file:
             df = df.dropna(subset=["Latitud", "Longitud"])
 
     # ---------------------- CLUSTERING ----------------------
-    df = apply_balanced_clustering(df, num_clusters, max_points)
+    df = apply_balanced_clustering(df, num_clusters)
 
     # ---------------------- ROUTE VISUALIZATION ----------------------
     agent = st.number_input("🔍 Select Agent", 1, num_clusters, 1)
@@ -115,9 +116,6 @@ if uploaded_file:
         route_order = tsp_nearest_neighbor(cluster_data[["Latitud", "Longitud"]].values)
         cluster_data = cluster_data.iloc[route_order]
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
-
-        # Ensure correct CSV format
-        csv_data = cluster_data.sort_values("Order")[["Order", "Nombre Comercial", "Latitud", "Longitud"]]
 
         # Map Visualization
         m = folium.Map(location=cluster_data[["Latitud", "Longitud"]].mean().tolist(), zoom_start=12)
@@ -130,11 +128,13 @@ if uploaded_file:
         # Display
         st.write(f"## 🗺️ Route for Agent {agent}")
         st_folium(m, width=800, height=500)
-        
-        # Download button for correctly formatted CSV
+
+        # ---------------------- CSV EXPORT ----------------------
+        csv_buffer = io.StringIO()
+        cluster_data.to_csv(csv_buffer, index=False)
         st.download_button(
             "📥 Download Route",
-            csv_data.to_csv(index=False),
+            csv_buffer.getvalue(),
             f"agent_{agent}_route.csv",
             "text/csv"
         )
