@@ -116,6 +116,9 @@ if uploaded_file:
         cluster_data = cluster_data.iloc[route_order]
         cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
+        # Ensure correct CSV format
+        csv_data = cluster_data.sort_values("Order")[["Order", "Nombre Comercial", "Latitud", "Longitud"]]
+
         # Map Visualization
         m = folium.Map(location=cluster_data[["Latitud", "Longitud"]].mean().tolist(), zoom_start=12)
         for _, row in cluster_data.iterrows():
@@ -127,9 +130,11 @@ if uploaded_file:
         # Display
         st.write(f"## 🗺️ Route for Agent {agent}")
         st_folium(m, width=800, height=500)
+        
+        # Download button for correctly formatted CSV
         st.download_button(
             "📥 Download Route",
-            cluster_data.to_csv(index=False),
+            csv_data.to_csv(index=False),
             f"agent_{agent}_route.csv",
             "text/csv"
         )
