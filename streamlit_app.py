@@ -41,7 +41,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<h1> 🚗 Smart Route Optimization</h1>", unsafe_allow_html=True)
+st.markdown("<h1> 🚀 Smart Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- CORE FUNCTIONS ----------------------
