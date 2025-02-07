@@ -13,6 +13,13 @@ from geopy.distance import geodesic
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
+# Google AdSense Meta Tag for Verification
+st.markdown(
+    """
+    <meta name="google-adsense-account" content="ca-pub-8873967395766164">
+    """,
+    unsafe_allow_html=True
+)
 # ---------------------- GOOGLE ADSENSE BANNER ----------------------
 adsense_code = """
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
