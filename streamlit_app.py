@@ -107,7 +107,7 @@ def get_test_data():
         "Municipio": ["Santo Domingo", "Santiago", "Santo Domingo Este", "Distrito Nacional", "Distrito Nacional"],
         "Provincia": ["Distrito Nacional", "Santiago", "Santo Domingo", "Distrito Nacional", "Distrito Nacional"],
         "Latitud": [18.4663, 19.4517, 18.4821, 18.4703, 18.4559],
-        "Longitud": [-69.9312, -70.6970, -69.8689, -69.8923, -69.9298]
+        "Longitud": [-69.9337, -70.6970, -69.8730, -69.8903, -69.9020]
     })
     return test_data
 # ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
