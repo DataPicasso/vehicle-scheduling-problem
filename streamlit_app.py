@@ -44,25 +44,25 @@ components.html(adsense_code, height=100, scrolling=False)
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
 #st.markdown(
     """
-    #<style>
-        #.best-routes-header {
+    <style>
+        .best-routes-header {
             #font-family: 'Arial', sans-serif;
             #font-weight: bold;
             #font-size: 36px;
-           # text-align: center;
-          #  color: #FF0000;  /* Red Color */
-         #   letter-spacing: 2px;
-         #  text-transform: uppercase;
-         #   margin-top: 20px;
-        #}
-       # .ai-text {
-      #      color: black;
-     #       font-size: 28px;
-    #    }
-   # </style>
-  #  <div class="best-routes-header">
- #       BESTROUTES <span class="ai-text">AI</span>
-#    </div>
+            text-align: center;
+            color: #FF0000;  /* Red Color */
+            letter-spacing: 2px;
+           text-transform: uppercase;
+            margin-top: 20px;
+        }
+        .ai-text {
+            color: black;
+            font-size: 28px;
+        }
+    </style>
+    <div class="best-routes-header">
+        BESTROUTES <span class="ai-text">AI</span>
+    </div>
     """,
     unsafe_allow_html=True
 )
