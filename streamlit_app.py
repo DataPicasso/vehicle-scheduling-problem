@@ -21,6 +21,23 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
+# ---------------------- GOOGLE ADSENSE BANNER ----------------------
+adsense_code = """
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
+     crossorigin="anonymous"></script>
+<!-- Ai-route-optimization -->
+<ins class="adsbygoogle"
+     style="display:block; text-align:center;"
+     data-ad-client="ca-pub-8873967395766164"
+     data-ad-slot="1512007770"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+"""
+
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
 st.markdown(
     """
@@ -53,23 +70,6 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-
-# ---------------------- GOOGLE ADSENSE BANNER ----------------------
-adsense_code = """
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
-     crossorigin="anonymous"></script>
-<!-- Ai-route-optimization -->
-<ins class="adsbygoogle"
-     style="display:block; text-align:center;"
-     data-ad-client="ca-pub-8873967395766164"
-     data-ad-slot="1512007770"
-     data-ad-format="auto"
-     data-full-width-responsive="true"></ins>
-<script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-"""
-
 # Display Ad in Streamlit using components.html (Supports JS execution)
 components.html(adsense_code, height=100, scrolling=False)
 
