@@ -190,7 +190,7 @@ uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type
 # ---------------------- USE TEST DATA BUTTON ----------------------
 if st.button("📊 Usar CSV de Prueba"):
     df = get_test_data()
-    st.success("✅ ¡Se cargó el dataset de prueba con ubicaciones reales de República Dominicana!")
+    st.success("✅ ¡Se cargó el dataset de prueba!")
 else:
     if uploaded_file:
         df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
@@ -202,23 +202,7 @@ if df is not None:
     df['Longitud'] = df['Longitud'].astype(float)
     st.write("✅ **Dataset cargado correctamente**. Vista previa:")
     st.dataframe(df.head())
-  # ---------------------- USE TEST DATA BUTTON ----------------------
-if st.button("📊 Usar CSV de Prueba"):
-    df = get_test_data()
-    st.success("✅ ¡Se cargó el dataset de prueba con ubicaciones reales de República Dominicana!")
-else:
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
-    else:
-        df = None
 
-if df is not None:
-    # Ensure Latitud & Longitud are floats
-    df["Latitud"] = df["Latitud"].astype(float)
-    df["Longitud"] = df["Longitud"].astype(float)
-
-    st.write("✅ **Dataset cargado correctamente**. Vista previa:")
-    st.dataframe(df.head())
 
     # ---------------------- PARAMETER SELECTION ----------------------
     col1, col2 = st.columns(2)
