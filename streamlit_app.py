@@ -44,7 +44,7 @@ st.markdown(
     </div>
     <div class="author-credit">
         By: Pedro Miguel Figueroa Domínguez
-        🏎️
+        
     </div>
     """,
     unsafe_allow_html=True
@@ -90,7 +90,7 @@ st.markdown(
 )
 
 st.markdown("<h1>  AI Route Optimization </h1>", unsafe_allow_html=True)
-st.write("Optimize routes using Clustering & TSP with Google Maps API.")
+st.write("🏎️ Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- FUNCTION TO GENERATE TEST DATA ----------------------
 def get_test_data():
