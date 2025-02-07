@@ -13,7 +13,7 @@ from geopy.distance import geodesic
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 # Cargar la imagen del logo
-logo_path = "BEST ROUTES.png"
+logo_path = "vehicle-scheduling-problem/BEST ROUTES.png"
 
 # Mostrar el logo en el centro arriba
 st.markdown(
