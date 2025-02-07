@@ -13,12 +13,38 @@ from geopy.distance import geodesic
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
-# Ruta del logo (asegúrate de que esté en el mismo directorio que el script)
-logo_url = "https://github.com/DataPicasso/vehicle-scheduling-problem/blob/main/BEST%20ROUTES.png?raw=true"
-
-# Mostrar el logo en la parte superior (centrado)
-st.image(logo_url, use_column_width=False, width=250)
-
+# ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
+st.markdown(
+    """
+    <style>
+        .best-routes-header {
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            font-size: 36px;
+            text-align: center;
+            color: #FF0000;  /* Red Color */
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-top: 20px;
+        }
+        .ai-text {
+            color: black;
+            font-size: 28px;
+        }
+        .divider {
+            width: 60%;
+            height: 3px;
+            background-color: #FF0000;
+            margin: 10px auto;
+        }
+    </style>
+    <div class="best-routes-header">
+        BESTROUTES <span class="ai-text">AI</span>
+    </div>
+    <div class="divider"></div>
+    """,
+    unsafe_allow_html=True
+)
 # ---------------------- GOOGLE ADSENSE META TAG ----------------------
 st.markdown(
     """
