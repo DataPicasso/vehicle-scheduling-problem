@@ -13,6 +13,14 @@ from geopy.distance import geodesic
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
+# ---------------------- GOOGLE ADSENSE META TAG ----------------------
+st.markdown(
+    """
+    <meta name="google-adsense-account" content="ca-pub-8873967395766164">
+    """,
+    unsafe_allow_html=True
+)
+
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
 st.markdown(
     """
@@ -45,13 +53,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
-# ---------------------- GOOGLE ADSENSE META TAG ----------------------
-st.markdown(
-    """
-    <meta name="google-adsense-account" content="ca-pub-8873967395766164">
-    """,
-    unsafe_allow_html=True
-)
+
 # ---------------------- GOOGLE ADSENSE BANNER ----------------------
 adsense_code = """
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
