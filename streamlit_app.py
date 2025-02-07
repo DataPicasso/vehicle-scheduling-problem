@@ -12,28 +12,13 @@ from geopy.distance import geodesic
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
-# Cargar la imagen del logo
-logo_path = "vehicle-scheduling-problem/BEST ROUTES.png"
 
-# Mostrar el logo en el centro arriba
-st.markdown(
-    f"""
-    <div style="display: flex; justify-content: center; margin-bottom: 20px;">
-        <img src="{logo_path}" width="250">
-    </div>
-    """,
-    unsafe_allow_html=True,
-)
+# Ruta del logo (asegúrate de que esté en el mismo directorio que el script)
+logo_path = "BEST ROUTES.png"
 
-# --------- Aquí puedes continuar con el resto de tu aplicación ---------
+# Mostrar el logo en la parte superior (centrado)
+st.image(logo_path, use_column_width=False, width=250)
 
-# Mostrar el logo en el centro abajo
-st.markdown(
-    f"""
-    <div style="display: flex; justify-content: center; margin-top: 40px;">
-        <img src="{logo_path}" width="250">
-    </div>
-    """,
     unsafe_allow_html=True,
 )
 # Google AdSense Meta Tag for Verification
