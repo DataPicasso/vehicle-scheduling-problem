@@ -198,10 +198,10 @@ else:
         df = None
 
 if df is not None:
-    df = df.astype({col: str for col in df.select_dtypes('object').columns})
+    df['Latitud'] = df['Latitud'].astype(float)
+    df['Longitud'] = df['Longitud'].astype(float)
     st.write("✅ **Dataset cargado correctamente**. Vista previa:")
     st.dataframe(df.head())
-    
     # ---------------------- PARAMETER SELECTION ----------------------
     col1, col2 = st.columns(2)
     with col1:
