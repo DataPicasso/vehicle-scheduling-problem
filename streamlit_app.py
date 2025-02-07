@@ -14,10 +14,11 @@ st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
 # Ruta del logo (asegúrate de que esté en el mismo directorio que el script)
-logo_path = "BEST ROUTES.png"
+logo_url = "https://github.com/DataPicasso/vehicle-scheduling-problem/blob/main/BEST%20ROUTES.png?raw=true"
+st.image(logo_url, use_column_width=False, width=250)
 
 # Mostrar el logo en la parte superior (centrado)
-st.image(logo_path, use_column_width=False, width=250)
+st.image(logo_url, use_column_width=False, width=250)
 
     unsafe_allow_html=True,
 )
