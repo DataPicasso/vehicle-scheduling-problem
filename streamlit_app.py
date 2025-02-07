@@ -13,15 +13,6 @@ from geopy.distance import geodesic
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
-# ---------------------- GOOGLE ADSENSE VERIFICATION CODE ----------------------
-# Ads.txt content
-ads_txt_content = "google.com, pub-8873967395766164, DIRECT, f08c47fec0942fa0"
-
-# Create a download button for ads.txt
-st.download_button(label="📥 Download ads.txt", data=ads_txt_content, file_name="ads.txt")
-
-# Display a message to copy and host manually
-st.write("If Google AdSense can't find your `ads.txt`, host it manually on your domain.")
 # ---------------------- GOOGLE ADSENSE BANNER ----------------------
 adsense_code = """
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
