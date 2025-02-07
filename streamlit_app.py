@@ -192,6 +192,29 @@ if "df" not in st.session_state:
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
 
+# ---------------------- MATCH BUTTON STYLE ----------------------
+st.markdown(
+    """
+    <style>
+        /* Style for the Test Dataset Button */
+        .stButton > button {
+            background-color: #0084ff !important; /* Same Blue as Download Button */
+            color: white !important;
+            font-size: 16px !important;
+            font-weight: bold !important;
+            padding: 10px 16px !important;
+            border: none !important;
+            border-radius: 8px !important;
+            cursor: pointer;
+        }
+        .stButton > button:hover {
+            background-color: #0066cc !important; /* Darker Blue on Hover */
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 # ---------------------- USE TEST DATA BUTTON ----------------------
 if st.button("📊 Usar CSV de Prueba", key="test_csv_button"):
     st.session_state.df = get_test_data()  # Store test data in session state
