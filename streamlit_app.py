@@ -202,6 +202,12 @@ if uploaded_file is not None:
 
 df = st.session_state.df  # Use the stored dataset
 
+# ---------------------- ENSURE DATASET PERSISTS ----------------------
+if df is not None:
+    df['Latitud'] = df['Latitud'].astype(float)
+    df['Longitud'] = df['Longitud'].astype(float)
+    st.write("✅ **Dataset cargado correctamente**. Vista previa:")
+    st.dataframe(df.head())
 
     # ---------------------- PARAMETER SELECTION ----------------------
     col1, col2 = st.columns(2)
