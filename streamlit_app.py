@@ -10,7 +10,7 @@ from sklearn.cluster import KMeans
 from geopy.distance import geodesic
 
 # ---------------------- STREAMLIT APP SETUP ----------------------
-st.set_page_config(page_title="🏎️ Best Route", layout="wide")
+st.set_page_config(page_title="Best Routes AI", layout="wide")
 
 
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
@@ -44,6 +44,7 @@ st.markdown(
     </div>
     <div class="author-credit">
         By: Pedro Miguel Figueroa Domínguez
+        🏎️
     </div>
     """,
     unsafe_allow_html=True
@@ -88,7 +89,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<h1>  AI Route Optimization 🏎️ </h1>", unsafe_allow_html=True)
+st.markdown("<h1>  AI Route Optimization </h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- FUNCTION TO GENERATE TEST DATA ----------------------
