@@ -202,48 +202,74 @@ if df is not None:
     df['Longitud'] = df['Longitud'].astype(float)
     st.write("✅ **Dataset cargado correctamente**. Vista previa:")
     st.dataframe(df.head())
+  # ---------------------- USE TEST DATA BUTTON ----------------------
+if st.button("📊 Usar CSV de Prueba"):
+    df = get_test_data()
+    st.success("✅ ¡Se cargó el dataset de prueba con ubicaciones reales de República Dominicana!")
+else:
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
+    else:
+        df = None
+
+if df is not None:
+    # Ensure Latitud & Longitud are floats
+    df["Latitud"] = df["Latitud"].astype(float)
+    df["Longitud"] = df["Longitud"].astype(float)
+
+    st.write("✅ **Dataset cargado correctamente**. Vista previa:")
+    st.dataframe(df.head())
+
     # ---------------------- PARAMETER SELECTION ----------------------
     col1, col2 = st.columns(2)
     with col1:
-        num_clusters = st.slider("🔹 Number of Agents", 2, 20, 10)
+        num_clusters = st.slider("🔹 Number of Agents", 2, min(len(df), 20), 5)
     with col2:
-        max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 50, 500, 281)
+        max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 2, len(df), max(5, len(df) // num_clusters))
 
     df = apply_balanced_clustering(df, num_clusters, max_points_per_cluster)
 
     agent = st.number_input("🔍 Select Agent ", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
+    # Ensure there are locations assigned to this agent
+    if cluster_data.empty:
+        st.warning("⚠️ No locations assigned to this agent. Try reducing the number of clusters.")
+        st.stop()
+
     # ---------------------- START & END POINT SELECTION ----------------------
+    if len(cluster_data) < 2:
+        st.warning("⚠️ Not enough locations in this cluster to create a route.")
+        st.stop()
+
     start_point = st.selectbox("🚶‍➡️ Select Start Location", cluster_data["Nombre Comercial"].tolist())
     end_point = st.selectbox("🚶 Select End Location", cluster_data["Nombre Comercial"].tolist())
 
-    if not cluster_data.empty:
-        cluster_data["Original Index"] = cluster_data.index
+    cluster_data["Original Index"] = cluster_data.index
 
-        # Reorder based on selected start and end points
-        start_idx = cluster_data[cluster_data["Nombre Comercial"] == start_point].index[0]
-        end_idx = cluster_data[cluster_data["Nombre Comercial"] == end_point].index[0]
+    # Reorder based on selected start and end points
+    start_idx = cluster_data[cluster_data["Nombre Comercial"] == start_point].index[0]
+    end_idx = cluster_data[cluster_data["Nombre Comercial"] == end_point].index[0]
 
-        tsp_order = [start_idx] + [i for i in cluster_data.index if i not in [start_idx, end_idx]] + [end_idx]
-        cluster_data = cluster_data.loc[tsp_order].reset_index(drop=True)
-        cluster_data["Order"] = range(1, len(cluster_data) + 1)
+    tsp_order = [start_idx] + [i for i in cluster_data.index if i not in [start_idx, end_idx]] + [end_idx]
+    cluster_data = cluster_data.loc[tsp_order].reset_index(drop=True)
+    cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
-        # ---------------------- MAP DISPLAY WITH FIX ----------------------
-        m = folium.Map(zoom_start=12)
+    # ---------------------- MAP DISPLAY WITH FIX ----------------------
+    m = folium.Map(zoom_start=12)
 
-        # Add markers and store bounds
-        bounds = []
-        for _, row in cluster_data.iterrows():
-            loc = [row["Latitud"], row["Longitud"]]
-            folium.Marker(loc, popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}").add_to(m)
-            bounds.append(loc)
+    # Add markers and store bounds
+    bounds = []
+    for _, row in cluster_data.iterrows():
+        loc = [row["Latitud"], row["Longitud"]]
+        folium.Marker(loc, popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}").add_to(m)
+        bounds.append(loc)
 
-        folium.PolyLine(cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1).add_to(m)
+    folium.PolyLine(cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1).add_to(m)
 
-        m.fit_bounds(bounds)  # Ensure full view of all points
+    m.fit_bounds(bounds)  # Ensure full view of all points
 
-        st.write(f"## 🧑🏽‍💼 Route for Agent {agent}")
-        st_folium(m, width=800, height=500)
+    st.write(f"## 🧑🏽‍💼 Route for Agent {agent}")
+    st_folium(m, width=800, height=500)
 
-        st.download_button("📥 Download Optimized Route", cluster_data.to_csv(index=False), f"agent_{agent}_optimized_route.csv", "text/csv")
+    st.download_button("📥 Download Optimized Route", cluster_data.to_csv(index=False), f"agent_{agent}_optimized_route.csv", "text/csv")
