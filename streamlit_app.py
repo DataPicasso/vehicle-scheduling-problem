@@ -38,6 +38,9 @@ adsense_code = """
 </script>
 """
 
+# Display Ad in Streamlit using components.html (Supports JS execution)
+components.html(adsense_code, height=100, scrolling=False)
+
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
 st.markdown(
     """
@@ -56,22 +59,14 @@ st.markdown(
             color: black;
             font-size: 28px;
         }
-        .divider {
-            width: 60%;
-            height: 3px;
-            background-color: #FF0000;
-            margin: 10px auto;
-        }
     </style>
     <div class="best-routes-header">
         BESTROUTES <span class="ai-text">AI</span>
     </div>
-    <div class="divider"></div>
     """,
     unsafe_allow_html=True
 )
-# Display Ad in Streamlit using components.html (Supports JS execution)
-components.html(adsense_code, height=100, scrolling=False)
+
 
 # Apply light Apple-like design
 st.markdown(
