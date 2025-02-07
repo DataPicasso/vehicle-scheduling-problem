@@ -184,24 +184,23 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
 
     return df
 
+# ---------------------- SESSION STATE TO PERSIST DATA ----------------------
+if "df" not in st.session_state:  
+    st.session_state.df = None  # Initialize session state variable
+
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
 
 # ---------------------- USE TEST DATA BUTTON ----------------------
-if st.button("📊 Usar CSV de Prueba"):
-    df = get_test_data()
-    st.success("✅ ¡Se cargó el dataset de prueba!")
-else:
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
-    else:
-        df = None
+if st.button("📊 Usar CSV de Prueba", key="test_csv_button"):
+    st.session_state.df = get_test_data()  # Store test data in session state
+    st.success("✅ ¡Se cargó el dataset de prueba con ubicaciones reales de República Dominicana!")
 
-if df is not None:
-    df['Latitud'] = df['Latitud'].astype(float)
-    df['Longitud'] = df['Longitud'].astype(float)
-    st.write("✅ **Dataset cargado correctamente**. Vista previa:")
-    st.dataframe(df.head())
+# Preserve uploaded dataset (only update if a new file is provided)
+if uploaded_file is not None:
+    st.session_state.df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
+
+df = st.session_state.df  # Use the stored dataset
 
 
     # ---------------------- PARAMETER SELECTION ----------------------
