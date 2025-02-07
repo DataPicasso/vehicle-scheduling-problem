@@ -14,55 +14,55 @@ st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
 # ---------------------- GOOGLE ADSENSE META TAG ----------------------
-st.markdown(
-    """
-    <meta name="google-adsense-account" content="ca-pub-8873967395766164">
-    """,
-    unsafe_allow_html=True
-)
+#.markdown(
+ #   """
+  #  <meta name="google-adsense-account" content="ca-pub-8873967395766164">
+   # """,
+    #unsafe_allow_html=True
+#)
 
 
 # ---------------------- GOOGLE ADSENSE BANNER ----------------------
-adsense_code = """
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
-     crossorigin="anonymous"></script>
-<!-- Ai-route-optimization -->
-<ins class="adsbygoogle"
-     style="display:block; text-align:center;"
-     data-ad-client="ca-pub-8873967395766164"
-     data-ad-slot="1512007770"
-     data-ad-format="auto"
-     data-full-width-responsive="true"></ins>
-<script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
+#adsense_code = """
+#<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
+ #    crossorigin="anonymous"></script>
+#<!-- Ai-route-optimization -->
+#<ins class="adsbygoogle"
+ #    style="display:block; text-align:center;"
+  #   data-ad-client="ca-pub-8873967395766164"
+   #  data-ad-slot="1512007770"
+    # data-ad-format="auto"
+     #data-full-width-responsive="true"></ins>
+#<script>
+  #   (adsbygoogle = window.adsbygoogle || []).push({});
+#</script>
 """
 
 # Display Ad in Streamlit using components.html (Supports JS execution)
 components.html(adsense_code, height=100, scrolling=False)
 
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
-st.markdown(
+#st.markdown(
     """
-    <style>
-        .best-routes-header {
-            font-family: 'Arial', sans-serif;
-            font-weight: bold;
-            font-size: 36px;
-            text-align: center;
-            color: #FF0000;  /* Red Color */
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            margin-top: 20px;
-        }
-        .ai-text {
-            color: black;
-            font-size: 28px;
-        }
-    </style>
-    <div class="best-routes-header">
-        BESTROUTES <span class="ai-text">AI</span>
-    </div>
+    #<style>
+        #.best-routes-header {
+            #font-family: 'Arial', sans-serif;
+            #font-weight: bold;
+            #font-size: 36px;
+           # text-align: center;
+          #  color: #FF0000;  /* Red Color */
+         #   letter-spacing: 2px;
+         #  text-transform: uppercase;
+         #   margin-top: 20px;
+        #}
+       # .ai-text {
+      #      color: black;
+     #       font-size: 28px;
+    #    }
+   # </style>
+  #  <div class="best-routes-header">
+ #       BESTROUTES <span class="ai-text">AI</span>
+#    </div>
     """,
     unsafe_allow_html=True
 )
