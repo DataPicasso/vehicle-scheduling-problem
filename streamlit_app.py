@@ -195,7 +195,7 @@ uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type
 # ---------------------- USE TEST DATA BUTTON ----------------------
 if st.button("📊 Usar CSV de Prueba", key="test_csv_button"):
     st.session_state.df = get_test_data()  # Store test data in session state
-    st.success("✅ ¡Se cargó el dataset de prueba con ubicaciones reales de República Dominicana!")
+    st.success("✅ ¡Se cargó el dataset de prueba!")
 
 # Preserve uploaded dataset (only update if a new file is provided)
 if uploaded_file is not None:
