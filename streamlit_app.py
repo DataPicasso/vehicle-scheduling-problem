@@ -11,6 +11,24 @@ from geopy.distance import geodesic
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
+# ---------------------- GOOGLE ADSENSE BANNER ----------------------
+st.markdown(
+    """
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
+        crossorigin="anonymous"></script>
+    <ins class="adsbygoogle"
+         style="display:block"
+         data-ad-client="ca-pub-8873967395766164"
+         data-ad-slot="XXXXXXX"
+         data-ad-format="auto"
+         data-full-width-responsive="true"></ins>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
 # Apply light Apple-like design
 st.markdown(
     """
