@@ -31,13 +31,24 @@ st.markdown(
             color: black;
             font-size: 28px;
         }
+        .author-credit {
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            text-align: center;
+            color: #777; /* Gray color */
+            margin-top: 5px;
+        }
     </style>
     <div class="best-routes-header">
         BESTROUTES <span class="ai-text">AI</span>
     </div>
+    <div class="author-credit">
+        By: Pedro Miguel Figueroa Domínguez
+    </div>
     """,
     unsafe_allow_html=True
 )
+
 
 
 # Apply light Apple-like design
