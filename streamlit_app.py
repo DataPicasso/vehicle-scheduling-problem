@@ -14,17 +14,17 @@ st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
-#st.markdown(
+st.markdown(
     """
     <style>
         .best-routes-header {
-            #font-family: 'Arial', sans-serif;
-            #font-weight: bold;
-            #font-size: 36px;
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            font-size: 36px;
             text-align: center;
             color: #FF0000;  /* Red Color */
             letter-spacing: 2px;
-           text-transform: uppercase;
+            text-transform: uppercase;
             margin-top: 20px;
         }
         .ai-text {
