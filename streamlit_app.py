@@ -91,7 +91,27 @@ st.markdown(
 st.markdown("<h1> 🏎️ AI Route Optimization</h1>", unsafe_allow_html=True)
 st.write("Optimize routes using Clustering & TSP with Google Maps API.")
 
+# ---------------------- FUNCTION TO GENERATE TEST DATA ----------------------
+def get_test_data():
+    test_data = pd.DataFrame({
+        "Nombre Comercial": [
+            "Colmado La Esquina", "Supermercado Bravo", "Ferretería Popular", 
+            "Farmacia GBC", "Panadería El Buen Gusto"
+        ],
+        "Calle": [
+            "Av. Winston Churchill", "Calle del Sol", "Av. España", 
+            "Calle Duarte", "Av. Independencia"
+        ],
+        "No.": ["101", "202", "303", "404", "505"],
+        "Sector": ["Piantini", "Centro Histórico", "Ensanche Ozama", "Zona Colonial", "Gazcue"],
+        "Municipio": ["Santo Domingo", "Santiago", "Santo Domingo Este", "Distrito Nacional", "Distrito Nacional"],
+        "Provincia": ["Distrito Nacional", "Santiago", "Santo Domingo", "Distrito Nacional", "Distrito Nacional"],
+        "Latitud": [18.4663, 19.4517, 18.4821, 18.4703, 18.4559],
+        "Longitud": [-69.9312, -70.6970, -69.8689, -69.8923, -69.9298]
+    })
+    return test_data
 # ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
+
 with st.expander("📄 **Click to see File Requirements**"):
     st.markdown(
         """
@@ -167,13 +187,21 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
 
-if uploaded_file:
-    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
+# ---------------------- USE TEST DATA BUTTON ----------------------
+if st.button("📊 Usar CSV de Prueba"):
+    df = get_test_data()
+    st.success("✅ ¡Se cargó el dataset de prueba con ubicaciones reales de República Dominicana!")
+else:
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
+    else:
+        df = None
 
+if df is not None:
     df = df.astype({col: str for col in df.select_dtypes('object').columns})
-    st.write("✅ **File uploaded successfully!** Preview:")
+    st.write("✅ **Dataset cargado correctamente**. Vista previa:")
     st.dataframe(df.head())
-
+    
     # ---------------------- PARAMETER SELECTION ----------------------
     col1, col2 = st.columns(2)
     with col1:
