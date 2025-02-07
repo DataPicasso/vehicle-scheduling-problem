@@ -10,3 +10,4 @@ googlemaps
 openpyxl
 requests
 jupyter
+streamlit.components.v1
