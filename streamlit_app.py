@@ -15,15 +15,16 @@ st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 st.markdown(
     """
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
-        crossorigin="anonymous"></script>
+         crossorigin="anonymous"></script>
+    <!-- Ai-route-optimization -->
     <ins class="adsbygoogle"
          style="display:block"
          data-ad-client="ca-pub-8873967395766164"
-         data-ad-slot="XXXXXXX"
+         data-ad-slot="1512007770"
          data-ad-format="auto"
          data-full-width-responsive="true"></ins>
     <script>
-        (adsbygoogle = window.adsbygoogle || []).push({});
+         (adsbygoogle = window.adsbygoogle || []).push({});
     </script>
     """,
     unsafe_allow_html=True
