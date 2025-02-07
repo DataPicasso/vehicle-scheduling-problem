@@ -13,6 +13,15 @@ from geopy.distance import geodesic
 st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 
+# ---------------------- GOOGLE ADSENSE VERIFICATION CODE ----------------------
+adsense_verification_code = """
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
+     crossorigin="anonymous"></script>
+"""
+
+# Inject AdSense verification code using components.html()
+components.html(adsense_verification_code, height=0)
+
 # ---------------------- GOOGLE ADSENSE BANNER ----------------------
 adsense_code = """
 <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8873967395766164"
