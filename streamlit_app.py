@@ -15,14 +15,11 @@ st.set_page_config(page_title="🏎️ AI Route Optimization", layout="wide")
 
 # Ruta del logo (asegúrate de que esté en el mismo directorio que el script)
 logo_url = "https://github.com/DataPicasso/vehicle-scheduling-problem/blob/main/BEST%20ROUTES.png?raw=true"
-st.image(logo_url, use_column_width=False, width=250)
 
 # Mostrar el logo en la parte superior (centrado)
 st.image(logo_url, use_column_width=False, width=250)
 
-    unsafe_allow_html=True,
-)
-# Google AdSense Meta Tag for Verification
+# ---------------------- GOOGLE ADSENSE META TAG ----------------------
 st.markdown(
     """
     <meta name="google-adsense-account" content="ca-pub-8873967395766164">
