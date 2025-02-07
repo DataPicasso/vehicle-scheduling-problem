@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import folium
+import streamlit.components.v1 as components  # Required for embedding HTML ads
 from streamlit_folium import st_folium
 import googlemaps
 import io
