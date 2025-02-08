@@ -43,7 +43,7 @@ st.markdown(
         BESTROUTES <span class="ai-text">AI</span>
     </div>
     <div class="author-credit">
-        By: Pedro Miguel Figueroa Domínguez
+        Author: Pedro Miguel Figueroa Domínguez
         
     </div>
     """,
