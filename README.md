@@ -6,7 +6,7 @@
 **Author:** Pedro Miguel Figueroa Domínguez  
 
 ### **📖 Introduction**  
-This project is designed to **optimize visit routes** to different geographical locations using **clustering algorithms and the Traveling Salesman Problem (TSP) solution**, if you want to try it click [HERE](https://vehicle-scheduling-problem.streamlit.app/). The process consists of two main steps:  
+This project is designed to **optimize visit routes** to different geographical locations using **clustering algorithms and the Traveling Salesman Problem (TSP) solution**, if you want to try it click [HERE](https://bestroutes.streamlit.app/). The process consists of two main steps:  
 
 1. **Clustering Points:**  
    - A clustering algorithm groups locations into clusters with a **maximum of 281 points** each.  
