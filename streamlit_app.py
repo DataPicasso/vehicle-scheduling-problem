@@ -298,6 +298,10 @@ if df is not None:
     cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
     # ---------------------- MAP DISPLAY ----------------------
+
+    lat_inicial = cluster_data["Latitud"].mean()
+    lon_inicial = cluster_data["Longitud"].mean()
+
     m = folium.Map(location=[lat_inicial, lon_inicial], zoom_start=12, tiles="CartoDB positron")
 
 
