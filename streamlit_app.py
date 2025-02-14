@@ -133,19 +133,17 @@ with st.expander("📄 **Click to see File Requirements**"):
 
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
-    """Applies balanced clustering to evenly distribute points near the set limit."""
     coords = df[["Latitud", "Longitud"]].values
 
-    # Small noise added to avoid KMeans breaking due to identical points
+    # Pequeño ruido para evitar problemas con puntos idénticos
     jitter = np.random.normal(0, 0.00001, coords.shape)
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
     df["Cluster"] = kmeans.labels_
 
-    # Group points into cluster lists
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
     centroids = np.array(kmeans.cluster_centers_)
 
-    max_iterations = 100  # Prevent infinite loops
+    max_iterations = 100
     iterations = 0
 
     while iterations < max_iterations:
@@ -159,7 +157,6 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
             if point_count <= max_points_per_cluster:
                 continue
 
-            # Extra points que exceden el límite
             excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
             clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
 
@@ -182,13 +179,7 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     return df
 
 def nearest_neighbor_route(df_cluster, start_idx, end_idx):
-    """
-    Calcula un recorrido aproximado usando Vecino Más Cercano (Nearest Neighbor).
-    - df_cluster: DataFrame con columnas ["Latitud", "Longitud"].
-    - start_idx, end_idx: índices (del DataFrame) de los puntos de inicio y fin.
-    """
     all_points = df_cluster.index.tolist()
-    # Quitamos inicio y fin de la lista de pendientes
     to_visit = [i for i in all_points if i not in [start_idx, end_idx]]
     
     route = [start_idx]
@@ -200,19 +191,17 @@ def nearest_neighbor_route(df_cluster, start_idx, end_idx):
 
     current = start_idx
     while to_visit:
-        # El punto más cercano al actual
         closest = min(to_visit, key=lambda x: dist(current, x))
         route.append(closest)
         to_visit.remove(closest)
         current = closest
 
-    # Finalmente, añadimos el punto final
     route.append(end_idx)
     return route
 
-# ---------------------- SESSION STATE TO PERSIST DATA ----------------------
+# ---------------------- SESSION STATE ----------------------
 if "df" not in st.session_state:  
-    st.session_state.df = None  # Initialize session state variable
+    st.session_state.df = None
 
 # ---------------------- FILE UPLOAD ----------------------
 uploaded_file = st.file_uploader("📂 Upload your dataset (CSV or Excel)", type=["csv", "xlsx"])
@@ -242,22 +231,26 @@ st.markdown(
 
 # ---------------------- USE TEST DATA BUTTON ----------------------
 if st.button("📊 Usar CSV de Prueba", key="test_csv_button"):
-    st.session_state.df = get_test_data()  # Store test data in session state
+    st.session_state.df = get_test_data()
     st.success("✅ ¡Se cargó el dataset de prueba!")
 
-# Preserve uploaded dataset (only update if a new file is provided)
+# Leer archivo subido
 if uploaded_file is not None:
     if uploaded_file.name.endswith(".csv"):
         st.session_state.df = pd.read_csv(uploaded_file)
     else:
         st.session_state.df = pd.read_excel(uploaded_file)
 
-df = st.session_state.df  # Use the stored dataset
+df = st.session_state.df
 
-# ---------------------- ENSURE DATASET PERSISTS ----------------------
 if df is not None:
-    df['Latitud'] = df['Latitud'].astype(float)
-    df['Longitud'] = df['Longitud'].astype(float)
+    # Evitar el ArrowTypeError para la columna "No."
+    if "No." in df.columns:
+        df["No."] = df["No."].astype(str)
+
+    df["Latitud"] = df["Latitud"].astype(float)
+    df["Longitud"] = df["Longitud"].astype(float)
+
     st.write("✅ **Dataset cargado correctamente**. Vista previa:")
     st.dataframe(df.head())
 
@@ -273,12 +266,10 @@ if df is not None:
     agent = st.number_input("🔍 Select Agent ", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
-    # Ensure there are locations assigned to this agent
     if cluster_data.empty:
         st.warning("⚠️ No locations assigned to this agent. Try reducing the number of clusters.")
         st.stop()
 
-    # ---------------------- START & END POINT SELECTION ----------------------
     if len(cluster_data) < 2:
         st.warning("⚠️ Not enough locations in this cluster to create a route.")
         st.stop()
@@ -288,7 +279,6 @@ if df is not None:
 
     cluster_data["Original Index"] = cluster_data.index
 
-    # Obtener índices de inicio y fin
     start_idx = cluster_data[cluster_data["Nombre Comercial"] == start_point].index[0]
     end_idx = cluster_data[cluster_data["Nombre Comercial"] == end_point].index[0]
 
@@ -298,24 +288,21 @@ if df is not None:
     cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
     # ---------------------- MAP DISPLAY ----------------------
-
+    # Definimos centro del mapa a partir del promedio de los puntos
     lat_inicial = cluster_data["Latitud"].mean()
     lon_inicial = cluster_data["Longitud"].mean()
 
+    # Cambiamos el tiles a CartoDB positron
     m = folium.Map(location=[lat_inicial, lon_inicial], zoom_start=12, tiles="CartoDB positron")
 
-
-    # Add markers and store bounds
     bounds = []
     for _, row in cluster_data.iterrows():
         loc = [row["Latitud"], row["Longitud"]]
         folium.Marker(loc, popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}").add_to(m)
         bounds.append(loc)
 
-    # Dibujar la ruta con líneas
     folium.PolyLine(cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1).add_to(m)
 
-    # Ajustar el mapa para que se vean todos los puntos
     m.fit_bounds(bounds)
 
     st.write(f"## 🧑🏽‍💼 Route for Agent {agent}")
