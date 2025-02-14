@@ -2,10 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import folium
-import streamlit.components.v1 as components  # Required for embedding HTML ads
 from streamlit_folium import st_folium
-import googlemaps
-import io
 from sklearn.cluster import KMeans
 from geopy.distance import geodesic
 
@@ -48,7 +45,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Apply light Apple-like design
+# ---------------------- A LIGHT THEME STYLING ----------------------
 st.markdown(
     """
     <style>
@@ -108,7 +105,7 @@ def get_test_data():
     })
     return test_data
 
-# ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
+# ---------------------- FILE REQUIREMENTS ----------------------
 with st.expander("📄 **Click to see File Requirements**"):
     st.markdown(
         """
@@ -133,13 +130,15 @@ with st.expander("📄 **Click to see File Requirements**"):
 
 # ---------------------- CORE FUNCTIONS ----------------------
 def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
+    """Applies balanced clustering to evenly distribute points near the set limit."""
     coords = df[["Latitud", "Longitud"]].values
 
-    # Pequeño ruido para evitar problemas con puntos idénticos
+    # Small noise to avoid KMeans issues with identical coords
     jitter = np.random.normal(0, 0.00001, coords.shape)
     kmeans = KMeans(n_clusters=num_clusters, n_init=10, random_state=42).fit(coords + jitter)
     df["Cluster"] = kmeans.labels_
 
+    # Group points
     clusters_dict = {i: df[df["Cluster"] == i].index.tolist() for i in range(num_clusters)}
     centroids = np.array(kmeans.cluster_centers_)
 
@@ -157,6 +156,7 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
             if point_count <= max_points_per_cluster:
                 continue
 
+            # Points that exceed the limit
             excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
             clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
 
@@ -179,6 +179,9 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     return df
 
 def nearest_neighbor_route(df_cluster, start_idx, end_idx):
+    """
+    Simple TSP approach using Nearest Neighbor.
+    """
     all_points = df_cluster.index.tolist()
     to_visit = [i for i in all_points if i not in [start_idx, end_idx]]
     
@@ -191,6 +194,7 @@ def nearest_neighbor_route(df_cluster, start_idx, end_idx):
 
     current = start_idx
     while to_visit:
+        # Next closest point
         closest = min(to_visit, key=lambda x: dist(current, x))
         route.append(closest)
         to_visit.remove(closest)
@@ -199,7 +203,7 @@ def nearest_neighbor_route(df_cluster, start_idx, end_idx):
     route.append(end_idx)
     return route
 
-# ---------------------- SESSION STATE ----------------------
+# ---------------------- SESSION STATE TO PERSIST DATA ----------------------
 if "df" not in st.session_state:  
     st.session_state.df = None
 
@@ -212,7 +216,7 @@ st.markdown(
     <style>
         /* Style for the Test Dataset Button */
         .stButton > button {
-            background-color: #0084ff !important; /* Same Blue as Download Button */
+            background-color: #0084ff !important;
             color: white !important;
             font-size: 16px !important;
             font-weight: bold !important;
@@ -222,7 +226,7 @@ st.markdown(
             cursor: pointer;
         }
         .stButton > button:hover {
-            background-color: #0066cc !important; /* Darker Blue on Hover */
+            background-color: #0066cc !important;
         }
     </style>
     """,
@@ -234,7 +238,7 @@ if st.button("📊 Usar CSV de Prueba", key="test_csv_button"):
     st.session_state.df = get_test_data()
     st.success("✅ ¡Se cargó el dataset de prueba!")
 
-# Leer archivo subido
+# If a file is uploaded, read it
 if uploaded_file is not None:
     if uploaded_file.name.endswith(".csv"):
         st.session_state.df = pd.read_csv(uploaded_file)
@@ -243,8 +247,9 @@ if uploaded_file is not None:
 
 df = st.session_state.df
 
+# ---------------------- MAIN LOGIC ----------------------
 if df is not None:
-    # Evitar el ArrowTypeError para la columna "No."
+    # Fix for PyArrow error if there's a "No." column
     if "No." in df.columns:
         df["No."] = df["No."].astype(str)
 
@@ -261,8 +266,10 @@ if df is not None:
     with col2:
         max_points_per_cluster = st.slider("🔹 Max Locations per Agent", 2, len(df), max(5, len(df) // num_clusters))
 
+    # Apply the balanced clustering
     df = apply_balanced_clustering(df, num_clusters, max_points_per_cluster)
 
+    # Agent selection
     agent = st.number_input("🔍 Select Agent ", 1, num_clusters, 1)
     cluster_data = df[df["Cluster"] == agent - 1].copy()
 
@@ -274,6 +281,7 @@ if df is not None:
         st.warning("⚠️ Not enough locations in this cluster to create a route.")
         st.stop()
 
+    # Start and end selection
     start_point = st.selectbox("🚶‍➡️ Select Start Location", cluster_data["Nombre Comercial"].tolist())
     end_point = st.selectbox("🚶 Select End Location", cluster_data["Nombre Comercial"].tolist())
 
@@ -282,33 +290,38 @@ if df is not None:
     start_idx = cluster_data[cluster_data["Nombre Comercial"] == start_point].index[0]
     end_idx = cluster_data[cluster_data["Nombre Comercial"] == end_point].index[0]
 
-    # ---------------------- NEAREST NEIGHBOR ROUTE ----------------------
+    # Compute route with nearest neighbor
     tsp_order = nearest_neighbor_route(cluster_data, start_idx, end_idx)
     cluster_data = cluster_data.loc[tsp_order].reset_index(drop=True)
     cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
     # ---------------------- MAP DISPLAY ----------------------
-    # Definimos centro del mapa a partir del promedio de los puntos
-    lat_inicial = cluster_data["Latitud"].mean()
-    lon_inicial = cluster_data["Longitud"].mean()
+    # Define a static map of the Dominican Republic
+    # (approx center ~ [19.0, -70.0], zoom ~ 8)
+    m = folium.Map(location=[19.0, -70.0], zoom_start=8, tiles="CartoDB positron")
 
-    # Cambiamos el tiles a CartoDB positron
-    m = folium.Map(location=[lat_inicial, lon_inicial], zoom_start=12, tiles="CartoDB positron")
-
-    bounds = []
+    # Add markers
     for _, row in cluster_data.iterrows():
         loc = [row["Latitud"], row["Longitud"]]
-        folium.Marker(loc, popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}").add_to(m)
-        bounds.append(loc)
+        folium.Marker(
+            loc, 
+            popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}"
+        ).add_to(m)
 
-    folium.PolyLine(cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1).add_to(m)
-
-    m.fit_bounds(bounds)
+    # Draw the route
+    folium.PolyLine(
+        cluster_data[["Latitud", "Longitud"]].values, 
+        color="blue", 
+        weight=2.5, 
+        opacity=1
+    ).add_to(m)
 
     st.write(f"## 🧑🏽‍💼 Route for Agent {agent}")
+    # Show the map once; it won't auto-center or re-fit on zoom.
+    # The user can pan/zoom client-side, but the map won't recalculate or re-render on those actions.
     st_folium(m, width=800, height=500)
 
-    # Botón para descargar la ruta
+    # Download button for the route
     st.download_button(
         "📥 Download Optimized Route",
         cluster_data.to_csv(index=False),
