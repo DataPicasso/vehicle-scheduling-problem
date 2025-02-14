@@ -12,7 +12,6 @@ from geopy.distance import geodesic
 # ---------------------- STREAMLIT APP SETUP ----------------------
 st.set_page_config(page_title="Best Routes AI", layout="wide")
 
-
 # ---------------------- BESTROUTES AI CUSTOM HEADER ----------------------
 st.markdown(
     """
@@ -44,13 +43,10 @@ st.markdown(
     </div>
     <div class="author-credit">
         Author: Pedro Miguel Figueroa Domínguez
-        
     </div>
     """,
     unsafe_allow_html=True
 )
-
-
 
 # Apply light Apple-like design
 st.markdown(
@@ -89,7 +85,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.markdown("<h1>  AI Route Optimization </h1>", unsafe_allow_html=True)
+st.markdown("<h1>AI Route Optimization</h1>", unsafe_allow_html=True)
 st.write("🏎️ Optimize routes using Clustering & TSP with Google Maps API.")
 
 # ---------------------- FUNCTION TO GENERATE TEST DATA ----------------------
@@ -111,8 +107,8 @@ def get_test_data():
         "Longitud": [-69.9337, -70.6970, -69.8730, -69.8903, -69.9020]
     })
     return test_data
-# ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
 
+# ---------------------- FOLDING BOX FOR FILE REQUIREMENTS ----------------------
 with st.expander("📄 **Click to see File Requirements**"):
     st.markdown(
         """
@@ -131,7 +127,6 @@ with st.expander("📄 **Click to see File Requirements**"):
         **⚠️ Important Note:**  
         - If Latitud and Longitud are **missing**, you can retrieve them using the **Google Maps API** in this platform.
         - The more accurate the coordinates, the better the clustering and routing results.
-
         """,
         unsafe_allow_html=True
     )
@@ -164,6 +159,7 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
             if point_count <= max_points_per_cluster:
                 continue
 
+            # Extra points que exceden el límite
             excess_points = clusters_dict[cluster_id][- (point_count - max_points_per_cluster):]
             clusters_dict[cluster_id] = clusters_dict[cluster_id][: max_points_per_cluster]
 
@@ -184,6 +180,35 @@ def apply_balanced_clustering(df, num_clusters, max_points_per_cluster):
     df["Cluster"] = new_labels
 
     return df
+
+def nearest_neighbor_route(df_cluster, start_idx, end_idx):
+    """
+    Calcula un recorrido aproximado usando Vecino Más Cercano (Nearest Neighbor).
+    - df_cluster: DataFrame con columnas ["Latitud", "Longitud"].
+    - start_idx, end_idx: índices (del DataFrame) de los puntos de inicio y fin.
+    """
+    all_points = df_cluster.index.tolist()
+    # Quitamos inicio y fin de la lista de pendientes
+    to_visit = [i for i in all_points if i not in [start_idx, end_idx]]
+    
+    route = [start_idx]
+
+    def dist(a, b):
+        lat_a, lon_a = df_cluster.loc[a, ["Latitud", "Longitud"]]
+        lat_b, lon_b = df_cluster.loc[b, ["Latitud", "Longitud"]]
+        return geodesic((lat_a, lon_a), (lat_b, lon_b)).km
+
+    current = start_idx
+    while to_visit:
+        # El punto más cercano al actual
+        closest = min(to_visit, key=lambda x: dist(current, x))
+        route.append(closest)
+        to_visit.remove(closest)
+        current = closest
+
+    # Finalmente, añadimos el punto final
+    route.append(end_idx)
+    return route
 
 # ---------------------- SESSION STATE TO PERSIST DATA ----------------------
 if "df" not in st.session_state:  
@@ -222,7 +247,10 @@ if st.button("📊 Usar CSV de Prueba", key="test_csv_button"):
 
 # Preserve uploaded dataset (only update if a new file is provided)
 if uploaded_file is not None:
-    st.session_state.df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
+    if uploaded_file.name.endswith(".csv"):
+        st.session_state.df = pd.read_csv(uploaded_file)
+    else:
+        st.session_state.df = pd.read_excel(uploaded_file)
 
 df = st.session_state.df  # Use the stored dataset
 
@@ -260,15 +288,16 @@ if df is not None:
 
     cluster_data["Original Index"] = cluster_data.index
 
-    # Reorder based on selected start and end points
+    # Obtener índices de inicio y fin
     start_idx = cluster_data[cluster_data["Nombre Comercial"] == start_point].index[0]
     end_idx = cluster_data[cluster_data["Nombre Comercial"] == end_point].index[0]
 
-    tsp_order = [start_idx] + [i for i in cluster_data.index if i not in [start_idx, end_idx]] + [end_idx]
+    # ---------------------- NEAREST NEIGHBOR ROUTE ----------------------
+    tsp_order = nearest_neighbor_route(cluster_data, start_idx, end_idx)
     cluster_data = cluster_data.loc[tsp_order].reset_index(drop=True)
     cluster_data["Order"] = range(1, len(cluster_data) + 1)
 
-    # ---------------------- MAP DISPLAY WITH FIX ----------------------
+    # ---------------------- MAP DISPLAY ----------------------
     m = folium.Map(zoom_start=12)
 
     # Add markers and store bounds
@@ -278,11 +307,19 @@ if df is not None:
         folium.Marker(loc, popup=f"{row['Nombre Comercial']}<br>Original Index: {row['Original Index']}").add_to(m)
         bounds.append(loc)
 
+    # Dibujar la ruta con líneas
     folium.PolyLine(cluster_data[["Latitud", "Longitud"]].values, color="blue", weight=2.5, opacity=1).add_to(m)
 
-    m.fit_bounds(bounds)  # Ensure full view of all points
+    # Ajustar el mapa para que se vean todos los puntos
+    m.fit_bounds(bounds)
 
     st.write(f"## 🧑🏽‍💼 Route for Agent {agent}")
     st_folium(m, width=800, height=500)
 
-    st.download_button("📥 Download Optimized Route", cluster_data.to_csv(index=False), f"agent_{agent}_optimized_route.csv", "text/csv")
+    # Botón para descargar la ruta
+    st.download_button(
+        "📥 Download Optimized Route",
+        cluster_data.to_csv(index=False),
+        f"agent_{agent}_optimized_route.csv",
+        "text/csv"
+    )
